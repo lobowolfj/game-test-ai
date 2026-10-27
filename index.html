@@ -114,7 +114,7 @@
             <button onclick="toggleMobileUI()" style="background:#555;">Ativar Controlos no Ecrã</button>
             <button onclick="toggleEditTouch()" style="background:#880;">Mover Botões Touch</button>
         </div>
-        <button onclick="fecharMenuOpcoes()" style="width:100%; margin-top:10px;">Voltar</button>
+        <button onclick="toggleMenuOpcoes()" style="width:100%; margin-top:10px;">Voltar</button>
         <button id="btnSairPartida" onclick="location.reload()" style="background: #800; width:100%; margin-top:5px; display:none;">Abandonar Partida</button>
     </div>
 
@@ -146,17 +146,25 @@
         // ==========================================
         // SISTEMA BASE (Variáveis)
         // ==========================================
-        const PREFIXO = "fnaf-v8-visibility-";
+        const PREFIXO = "fnaf-v9-lightfix-";
         
         let teclasMap = JSON.parse(localStorage.getItem('fnaf_keys')) || { cima:'w', baixo:'s', esq:'a', dir:'d', acao:'e', porta:'r', arma:'t', luz:'f', habQ:'q', habG:'g', habH:'h' };
         let gpMap = JSON.parse(localStorage.getItem('fnaf_gp')) || { acao:0, porta:2, arma:3, luz:1, habQ:4, habG:5, habH:6 }; 
         let touchPositions = JSON.parse(localStorage.getItem('fnaf_touch')) || {};
         
-        // Icones PS4 para o Menu
+        // Icones PS4 Completos
         const ps4Icons = {
             0: '✖', 1: '◯', 2: '🔲', 3: '🔺', 4: 'L1', 5: 'R1', 6: 'L2', 7: 'R2', 
             8: 'Share', 9: 'Options', 10: 'L3', 11: 'R3', 12: '↑', 13: '↓', 14: '←', 15: '→', 16: 'PS'
         };
+
+        function getAcaoTexto(acaoId) {
+            let tecla = "";
+            for(let k in teclasMap) { if(k === acaoId) tecla = teclasMap[k].toUpperCase(); }
+            let gp = "";
+            if(gpMap[acaoId] !== undefined) gp = ps4Icons[gpMap[acaoId]] || `B${gpMap[acaoId]}`;
+            return `[${tecla}/${gp}]`;
+        }
 
         const arcanosMaiores = {
             S: [ {id:0, nome:'Louco', desc:'[Q] Teleporte'}, {id:1, nome:'Mago', desc:'QTE=6'}, {id:2, nome:'Sacerdotisa', desc:'[Q] Invisível'}, {id:3, nome:'Imperatriz', desc:'+2 Vidas'}, {id:6, nome:'Enamorados', desc:'+Velocidade'}, {id:10, nome:'Fortuna', desc:'Sempre acha Arma'}, {id:19, nome:'Sol', desc:'Reparo Rápido'} ],
@@ -172,6 +180,10 @@
             portaSaida: { x: 0, andar: 0, aberta: false }, luaAtiva: 0, mundoAtivo: 0,
             mapaFisico: { largura: 3000, andares: [700, 500, 300], escadas: [] }
         };
+
+        // Canvas secundário para o nevoeiro de guerra (corrige ecrã preto)
+        const fogCanvas = document.createElement('canvas');
+        const fogCtx = fogCanvas.getContext('2d');
 
         // ==========================================
         // GERAÇÃO PROCEDURAL DE MAPA
@@ -259,6 +271,13 @@
         }
         function fecharConquistas() { document.getElementById('telaConquistas').style.display='none'; }
 
+        // Botão Fechar/Abrir
+        function toggleMenuOpcoes(inGame = false) {
+            let m = document.getElementById('overlayOpcoes');
+            if (m.style.display === 'block') fecharMenuOpcoes();
+            else abrirMenuOpcoes(inGame);
+        }
+
         function renderizarOpcoes() {
             let tk = ""; for(let k in teclasMap) tk += `<div class="config-row">${k.toUpperCase()}: <button onclick="mapTeclado('${k}')" id="tk_${k}">${teclasMap[k].toUpperCase()}</button></div>`;
             document.getElementById('listaControlosTeclado').innerHTML = tk;
@@ -271,23 +290,8 @@
             document.getElementById('listaControlosGamepad').innerHTML = gp;
         }
 
-        // Nova Lógica de Toggle do Menu de Opções
-        function toggleMenuOpcoes(inGame=false) {
-            let menu = document.getElementById('overlayOpcoes');
-            if (menu.style.display === 'block') { fecharMenuOpcoes(); } 
-            else { abrirMenuOpcoes(inGame); }
-        }
-
-        function abrirMenuOpcoes(inGame=false) { 
-            document.getElementById('overlayOpcoes').style.display='block'; 
-            renderizarOpcoes(); 
-            if(inGame) document.getElementById('btnSairPartida').style.display='block'; 
-        }
-        function fecharMenuOpcoes() { 
-            document.getElementById('overlayOpcoes').style.display='none'; 
-            editandoTouch=false; 
-            document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('t-edit-mode')); 
-        }
+        function abrirMenuOpcoes(inGame=false) { document.getElementById('overlayOpcoes').style.display='block'; renderizarOpcoes(); if(inGame) document.getElementById('btnSairPartida').style.display='block'; }
+        function fecharMenuOpcoes() { document.getElementById('overlayOpcoes').style.display='none'; editandoTouch=false; document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('t-edit-mode')); }
 
         function mapTeclado(k) {
             let btn = document.getElementById('tk_'+k); btn.innerText = '?'; btn.style.background='red';
@@ -296,10 +300,7 @@
         }
         
         let waitGp = null;
-        function mapGamepad(k) {
-            let btn = document.getElementById('gp_'+k); btn.innerText = '?'; btn.style.background='red';
-            waitGp = k; 
-        }
+        function mapGamepad(k) { let btn = document.getElementById('gp_'+k); btn.innerText = '?'; btn.style.background='red'; waitGp = k; }
 
         window.onload = () => { atualizarPreview(); renderizarOpcoes(); }
 
@@ -516,7 +517,12 @@
             minhaAcao = null; 
         }
 
-        function iniciarCanvas() { let m = gameState.jogadores[meuId]; inputPlayer.x=m.x; inputPlayer.y=m.y; inputPlayer.andar=m.andar; window.addEventListener('resize', ()=>{canvas.width=window.innerWidth; canvas.height=window.innerHeight;}); canvas.width=window.innerWidth; canvas.height=window.innerHeight; loopDeJogo(); }
+        function iniciarCanvas() { 
+            let m = gameState.jogadores[meuId]; inputPlayer.x=m.x; inputPlayer.y=m.y; inputPlayer.andar=m.andar; 
+            window.addEventListener('resize', ()=>{canvas.width=window.innerWidth; canvas.height=window.innerHeight;}); 
+            canvas.width=window.innerWidth; canvas.height=window.innerHeight; 
+            loopDeJogo(); 
+        }
 
         function atualizar() {
             if (!emJogo || document.getElementById('overlayOpcoes').style.display==='block') return;
@@ -614,62 +620,71 @@
                     else if (p.classeMonstro==='Lobisomem') { ctx.fillStyle=(p.cdStun>0)?'#505':'#4a2f18'; ctx.fillRect(-20,-75,40,50); ctx.fillStyle='yellow'; ctx.fillRect(0,-85,5,5); }
                     else { ctx.fillStyle=(p.cdStun>0)?'purple':'rgba(200,255,255,0.7)'; ctx.beginPath(); ctx.moveTo(-15,-20); ctx.lineTo(0,-90); ctx.lineTo(15,-20); ctx.fill(); }
                 } else {
-                    ctx.fillStyle = p.perfil.corRoupa; ctx.fillRect(-10,-50,20,30); ctx.fillStyle = p.perfil.corPele; ctx.fillRect(-10,-70,20,20); ctx.fillStyle = '#111'; ctx.fillRect(-8,-20,7,20); ctx.fillRect(1,-20,7,20); 
+                    ctx.fillStyle = p.perfil.corRoupa; ctx.fillRect(-10,-50,20,30); 
+                    ctx.fillStyle = p.perfil.corPele; ctx.beginPath(); ctx.arc(0, -60, 12, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#111'; ctx.fillRect(-8,-20,7,20); ctx.fillRect(1,-20,7,20); 
                     if(p.lanterna) { ctx.fillStyle='yellow'; ctx.fillRect(5,-45,10,5); }
                 }
                 ctx.restore();
-                if (p.estado==='agarrado') { ctx.fillStyle='red'; ctx.fillRect(p.x-30, p.y-125, (p.qteC/10)*60, 10); ctx.fillText("Aperte E!", p.x-25, p.y-130); }
+                if (p.estado==='agarrado') { ctx.fillStyle='red'; ctx.fillRect(p.x-30, p.y-125, (p.qteC/10)*60, 10); ctx.fillText(`Aperte ${getAcaoTexto('acao')}!`, p.x-35, p.y-130); }
             }
             ctx.restore();
 
-            // =============== ESCURIDÃO (FOG OF WAR CORRIGIDO) ===============
-            ctx.save(); ctx.translate(camX, camY);
-            
-            // Outros andares ficam totalmente escuros
-            ctx.fillStyle = 'black';
-            for (let i = 0; i < chao.length; i++) {
-                if (i !== meuObj.andar) ctx.fillRect(0, chao[i]-250, gameState.mapaFisico.largura, 300);
+            // =============== ESCURIDÃO / FOG OF WAR (CORRIGIDO) ===============
+            if (fogCanvas.width !== canvas.width || fogCanvas.height !== canvas.height) {
+                fogCanvas.width = canvas.width; fogCanvas.height = canvas.height;
             }
+            fogCtx.globalCompositeOperation = 'source-over';
+            fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
+            fogCtx.fillStyle = 'black';
+            fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
             
-            // Andar atual: Escurece suavemente, dando visibilidade maior ao redor
-            ctx.globalCompositeOperation = "source-over"; 
-            ctx.fillStyle = gameState.fase >= 2 ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.85)"; 
-            ctx.fillRect(0, chao[meuObj.andar]-250, gameState.mapaFisico.largura, 300);
+            let screenX_chao = camX; let screenY_chao = chao[meuObj.andar] - 250 + camY; let largura_chao = gameState.mapaFisico.largura;
             
-            ctx.globalCompositeOperation = "destination-out";
+            // Recorta a área do andar atual na escuridão total
+            fogCtx.globalCompositeOperation = 'destination-out';
+            fogCtx.fillRect(screenX_chao, screenY_chao, largura_chao, 300);
             
+            // Pinta o andar atual com escuridão base (dependendo da fase)
+            fogCtx.globalCompositeOperation = 'source-over';
+            fogCtx.fillStyle = gameState.fase >= 2 ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.85)";
+            fogCtx.fillRect(screenX_chao, screenY_chao, largura_chao, 300);
+            
+            // Perfura buracos de luz
+            fogCtx.globalCompositeOperation = 'destination-out';
             for(let id in gameState.jogadores) {
                 let p = gameState.jogadores[id];
                 if(p.andar === meuObj.andar && p.estado !== 'morto') {
-                    // Raio Limpo interno maior (300) e Fade de sombras mais suave (800) [Estilo Imagem de Referência]
-                    let raioLimpo = gameState.fase >= 2 ? 500 : 300;
-                    let raioFade = gameState.fase >= 2 ? 1200 : 800;
+                    let sX = p.x + camX; let sY = p.y - 50 + camY;
+                    let raioLimpo = gameState.fase >= 2 ? 400 : 200; 
+                    let raioFade = gameState.fase >= 2 ? 1000 : 600;
                     
-                    let grad = ctx.createRadialGradient(p.x, p.y-50, raioLimpo, p.x, p.y-50, raioFade); 
-                    grad.addColorStop(0, 'rgba(255,255,255,1)'); 
-                    grad.addColorStop(1, 'rgba(255,255,255,0)');
-                    ctx.fillStyle = grad; 
+                    let grad = fogCtx.createRadialGradient(sX, sY, raioLimpo, sX, sY, raioFade); 
+                    grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+                    fogCtx.fillStyle = grad; 
+                    fogCtx.beginPath(); fogCtx.arc(sX, sY, raioFade, 0, Math.PI*2); fogCtx.fill();
                     
-                    ctx.beginPath(); ctx.arc(p.x, p.y-50, raioFade, 0, Math.PI*2); ctx.fill();
-                    
-                    // Lanterna
                     if(p.lanterna) { 
-                        ctx.beginPath(); ctx.moveTo(p.x, p.y-50); 
-                        ctx.arc(p.x, p.y-50, 600, (p.direcao===1?-0.3:Math.PI-0.3), (p.direcao===1?0.3:Math.PI+0.3)); ctx.fill(); 
+                        fogCtx.beginPath(); fogCtx.moveTo(sX, sY); 
+                        fogCtx.arc(sX, sY, 600, (p.direcao===1?-0.3:Math.PI-0.3), (p.direcao===1?0.3:Math.PI+0.3)); fogCtx.fill(); 
                     }
                 }
             }
-            ctx.restore();
-            // ================================================================
+            
+            // Desenha a máscara de nevoeiro no canvas principal
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.drawImage(fogCanvas, 0, 0);
+            // ==================================================================
 
             // HUD
             desenharMinimapa();
-            ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(10, 50, 200, 100); ctx.fillStyle = 'white'; ctx.textAlign = 'left'; ctx.font = '14px monospace';
+            ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(10, 50, 240, 100); ctx.fillStyle = 'white'; ctx.textAlign = 'left'; ctx.font = '14px monospace';
             if (meuTipo==='sobrevivente') {
-                ctx.fillText("Vidas: "+"❤️".repeat(meuObj.vidas), 20, 70); ctx.fillText("Gens: "+gameState.geradoresRestantes, 20, 90); ctx.fillText(`Item: `+meuObj.item, 20, 110);
+                ctx.fillText("Vidas: "+"❤️".repeat(meuObj.vidas), 20, 70); ctx.fillText("Gens: "+gameState.geradoresRestantes, 20, 90); ctx.fillText(`Item ${getAcaoTexto('arma')}: `+meuObj.item, 20, 110);
                 if(meuObj.estado==='morto') { ctx.fillStyle='red'; ctx.font='40px Arial'; ctx.fillText("MORREU", canvas.width/2, canvas.height/2); }
             } else {
-                ctx.fillStyle='red'; ctx.fillText(meuObj.classeMonstro, 20, 70); ctx.fillStyle='white'; ctx.fillText(`Destruir: `+(meuObj.cdHabG<=0?"PRONTO":Math.ceil(meuObj.cdHabG/60)), 20, 90);
+                ctx.fillStyle='red'; ctx.fillText(meuObj.classeMonstro, 20, 70); ctx.fillStyle='white'; ctx.fillText(`Destruir ${getAcaoTexto('habG')}: `+(meuObj.cdHabG<=0?"PRONTO":Math.ceil(meuObj.cdHabG/60)), 20, 90);
+                ctx.fillStyle='yellow'; ctx.fillText(`Radar ${getAcaoTexto('habH')}: `+(meuObj.cdHabH<=0?"PRONTO":Math.ceil(meuObj.cdHabH/60)), 20, 110);
             }
         }
 
