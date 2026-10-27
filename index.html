@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Fuga da Mansão (Edição Definitiva)</title>
-    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/peerjs@1.5.1/dist/peerjs.min.js';document.head.appendChild(s);"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; color: white; font-family: monospace; touch-action: none; }
         canvas { display: block; image-rendering: pixelated; width: 100%; height: 100%; }
         
-        /* Ajuste do Painel para melhor visualização no telemóvel */
-        .painel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; padding: 15px; border: 2px solid #333; text-align: center; border-radius: 10px; max-height: 95vh; overflow-y: auto; z-index: 10; width: 95%; max-width: 380px; box-shadow: 0 0 30px rgba(255,0,0,0.3); }
+        .painel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; padding: 20px; border: 2px solid #333; text-align: center; border-radius: 10px; max-height: 95vh; overflow-y: auto; z-index: 10; width: 90%; max-width: 500px; box-shadow: 0 0 30px rgba(255,0,0,0.3); }
         #lobby, #telaTarot, #overlayOpcoes, #telaConquistas { display: none; } 
         
         input, button, select { padding: 8px; margin: 4px; font-family: monospace; font-size: 14px; border-radius: 5px; border: 1px solid #555; background: #222; color: white; }
@@ -29,9 +28,9 @@
         .carta-tarot:hover { border-color: #ff4d4d; background: #300; }
         .carta-titulo { font-size: 14px; color: #ffcc00; font-weight: bold; margin-bottom: 5px; }
         
-        /* UI FIXA NO JOGO - Botão InGame com área de toque maior */
+        /* UI FIXA NO JOGO */
         #btnFullscreen { position: absolute; top: 10px; left: 10px; z-index: 20; background: transparent; border: none; font-size: 24px; cursor: pointer; }
-        #btnMenuInGame { position: absolute; top: 15px; right: 15px; display: none; padding: 10px 15px; border-radius: 8px; z-index: 20; background: #333; font-size: 24px; border: 1px solid #555; }
+        #btnMenuInGame { position: absolute; top: 10px; right: 10px; display: none; z-index: 20; background: #333; font-size: 20px; }
         
         /* CONTROLES MOBILE (TOUCH) */
         #touchUI { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
@@ -45,6 +44,7 @@
 <body>
 
     <button id="btnFullscreen" onclick="toggleFullscreen()">📺</button>
+    <button id="btnFim" onclick="location.reload()" style="position:absolute;left:50%;top:65%;transform:translateX(-50%);z-index:30;display:none;padding:15px 30px;font-size:18px;">Voltar ao menu</button>
     <button id="btnMenuInGame" onclick="abrirMenuOpcoes(true)">⚙️</button>
 
     <!-- MENU INICIAL -->
@@ -54,12 +54,8 @@
         <div style="display: flex; justify-content: space-between;">
             <div class="config-box" style="flex-grow: 1;">
                 <div class="config-row">Nome: <input type="text" id="meuNome" value="Vítima" maxlength="10" oninput="atualizarPreview()"></div>
-                <div class="config-row">Pele/Roupa: <input type="color" id="minhaPele" value="#ffcc99" style="width:30px;" onchange="atualizarPreview()"><input type="color" id="minhaRoupa" value="#2b60de" style="width:30px;" onchange="atualizarPreview()"></div>
-                <div class="config-row">Chapéu: 
-                    <select id="meuAcessorio" onchange="atualizarPreview()">
-                        <option value="nenhum">Nenhum</option> <option value="bone">Boné</option> <option value="cartola">Cartola</option> <option value="mascara">Máscara</option>
-                    </select>
-                </div>
+                <div class="config-row">Cor / Crachá: <input type="color" id="minhaPele" value="#774f9c" style="width:30px;" onchange="atualizarPreview()"><input type="color" id="minhaRoupa" value="#a8832a" style="width:30px;" onchange="atualizarPreview()"></div>
+                <div class="config-row">Foto: <input type="file" id="fotoInput" accept="image/*" onchange="carregarFoto(this)" style="width:105px;font-size:10px;"><button onclick="removerFoto()" style="padding:3px 6px;">✖</button></div>
             </div>
             <div><canvas id="previewCanvas" width="80" height="100"></canvas></div>
         </div>
@@ -68,7 +64,16 @@
         <button onclick="verConquistas()" style="background: #a87b00; width:100%; margin-top:5px;">🏆 Conquistas</button>
         
         <hr style="border-color: #333; margin: 15px 0;">
-        <p style="font-size: 10px; color: gray;">Dica: Digite "007" no código para jogar Offline com Bots.</p>
+        <div class="config-box">
+            <b>🤖 Treino com bots</b>
+            <div class="config-row">Eu sou: <select id="papelTreino"><option value="assassino">Monstro</option><option value="sobrevivente">Sobrevivente</option></select></div>
+            <div class="config-row">Dificuldade: <select id="dificuldade"><option value="facil">Fácil</option><option value="medio" selected>Médio</option><option value="dificil">Difícil</option><option value="parado">Parados</option></select></div>
+            <div class="config-row">Bots sobreviventes: <input type="number" id="qtdBots" value="3" min="0" max="7" style="width:50px;"></div>
+            <div class="config-row">Geradores: <input type="number" id="qtdGenTreino" value="3" min="1" max="8" style="width:50px;"></div>
+            <div class="config-row"><label><input type="checkbox" id="extraChavesTreino"> Fase extra (luzes + chaves)</label></div>
+            <div class="config-row">Chaves: <input type="number" id="qtdChavesTreino" value="3" min="1" max="8" style="width:50px;"></div>
+            <button onclick="iniciarTreino()" style="background:#2b7a2b; width:100%; padding:12px;">🤖 JOGAR COM BOTS</button>
+        </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button onclick="criarJogo()" style="flex:1; padding:15px; min-width: 120px;">HOSPEDAR</button>
             <div style="flex:1; display:flex; flex-direction:column; min-width: 120px;">
@@ -83,7 +88,8 @@
         <h2 style="color: #ff4d4d;">SALA DE ESPERA</h2>
         <div id="codigoLobby" class="codigo-sala">---</div>
         <div id="areaHostConfig" style="display: none;" class="config-box">
-            <div class="config-row">Modo: <select id="modoJogo" onchange="atualizarLobbyHost()"><option value="classico">Clássico</option><option value="infeccao">Infeção</option></select></div>
+            <div class="config-row"><label><input type="checkbox" id="extraChaves"> Fase extra: luzes + chaves</label></div>
+            <div class="config-row">Chaves: <input type="number" id="qtdChaves" value="3" min="1" max="8" style="width:50px;"></div>
             <div class="config-row">Geradores: <input type="number" id="qtdGeradores" value="4" min="1" max="8" style="width: 50px;" onchange="atualizarLobbyHost()"></div>
         </div>
         <h4>Jogadores:</h4>
@@ -152,7 +158,10 @@
         // ==========================================
         // SISTEMA BASE (Variáveis)
         // ==========================================
+        const canvas = document.getElementById('gameCanvas');
         const PREFIXO = "fnaf-v7-final-";
+        const ACOES = ['acao','porta','arma','luz','habQ','habG','habH'];
+        let meuPerfil = null; let canvasIniciado = false; let fogCanvas = null; let frameNet = 0;
         
         let teclasMap = JSON.parse(localStorage.getItem('fnaf_keys')) || { cima:'w', baixo:'s', esq:'a', dir:'d', acao:'e', porta:'r', arma:'t', luz:'f', habQ:'q', habG:'g', habH:'h' };
         let gpMap = JSON.parse(localStorage.getItem('fnaf_gp')) || { acao:0, porta:2, arma:3, luz:1, habQ:4, habG:5, habH:6 }; // PS4: 0=X, 1=O, 2=Square, 3=Triangle, 4=L1, 5=R1, 6=L2
@@ -219,6 +228,9 @@
                 if(s) gameState.armarios.push({ x: s.x, andar: s.andar, aberto: false, item: r<0.1?'arma':(r<0.4?'faca':'nenhum') });
             }
 
+            gameState.extraChaves = !!document.getElementById('extraChaves').checked;
+            gameState.chavesNecessarias = Math.max(1, Math.min(8, parseInt(document.getElementById('qtdChaves').value) || 3));
+            gameState.chavesColetadas = 0; gameState.luzes = false; gameState.chavesItem = [];
             // A porta de saída (Fase 3) fica sempre no andar de baixo (0)
             gameState.portaSaida = { x: 50 + Math.random()*(largura-100), andar: 0, aberta: false };
         }
@@ -231,20 +243,41 @@
             else { if (document.exitFullscreen) document.exitFullscreen(); }
         }
 
-        function lerMeuPerfil() { return { nome: document.getElementById('meuNome').value || "P"+Math.floor(Math.random()*100), corPele: document.getElementById('minhaPele').value, corRoupa: document.getElementById('minhaRoupa').value, acessorio: document.getElementById('meuAcessorio').value }; }
-        
+        const SPR_SURV = (b,k) => [[300,30,175,235,b],[320,125,115,25,'#111'],[290,118,30,40,'#eee'],[370,118,30,40,'#eee'],[305,185,140,60,'#111'],[445,195,45,50,b],[460,230,70,60,b],[470,280,155,265,b],[470,545,130,75,b],[410,385,60,135,b],[315,480,155,85,b],[175,510,145,50,b],[100,510,80,50,b],[10,510,100,55,b],[175,455,55,55,b],[478,332,80,88,k],[500,620,100,190,b],[505,810,75,210,b],[430,1020,160,55,b]];
+        const SPR_MON = (c) => [[265,160,36,82,c],[318,112,38,125,c],[245,232,128,100,c],[248,242,46,40,'#111'],[250,250,24,24,'#fff'],[303,242,42,40,'#111'],[306,250,24,24,'#fff'],[253,288,96,28,'#111'],[278,332,52,10,'#7b3fa0'],[232,350,14,45,'#7b3fa0'],[376,352,14,45,'#7b3fa0'],[240,342,138,195,c],[180,340,50,208,c],[388,348,50,212,c],[250,537,128,95,c],[250,630,52,100,c],[307,630,68,100,c],[203,727,92,48,c],[307,727,106,48,c]];
+        function drawRects(c, rects, ox, oy, k, flip) {
+            rects.forEach(r => {
+                let x0 = flip ? (ox-(r[0]+r[2]))*k : (r[0]-ox)*k, x1 = x0 + r[2]*k, y0 = (r[1]-oy)*k, y1 = y0 + r[3]*k;
+                x0 = Math.floor(x0); y0 = Math.floor(y0);
+                c.fillStyle = r[4]; c.fillRect(x0, y0, Math.ceil(x1)-x0, Math.ceil(y1)-y0);
+            });
+        }
+let meuFotoData = null; const fotosData = {}, fotoImgs = {};
+        function getFoto(id) { const d = fotosData[id]; if(!d) return null; let i = fotoImgs[id]; if(!i || i._d !== d) { i = new Image(); i._d = d; i.src = d; fotoImgs[id] = i; } return (i.complete && i.naturalWidth) ? i : null; }
+        function carregarFoto(inp) {
+            const f = inp.files && inp.files[0]; if(!f) return; const r = new FileReader();
+            r.onload = () => { const im = new Image(); im.onload = () => {
+                const cv = document.createElement('canvas'); cv.width = cv.height = 40; const m = Math.min(im.width, im.height);
+                cv.getContext('2d').drawImage(im, (im.width-m)/2, (im.height-m)/2, m, m, 0, 0, 40, 40);
+                meuFotoData = cv.toDataURL('image/jpeg', 0.7);
+                const pv = new Image(); pv._d = meuFotoData; pv.onload = atualizarPreview; pv.src = meuFotoData; fotosData['__me'] = meuFotoData; fotoImgs['__me'] = pv;
+            }; im.src = r.result; }; r.readAsDataURL(f);
+        }
+        function removerFoto() { meuFotoData = null; delete fotosData['__me']; delete fotoImgs['__me']; document.getElementById('fotoInput').value = ''; atualizarPreview(); }
+        function drawSobrevivente(c, perfil, lanterna, foto, dir) {
+            drawRects(c, SPR_SURV(perfil.corPele, perfil.corRoupa), 530, 1075, 0.075, true);
+            if(lanterna) { c.fillStyle='yellow'; c.fillRect(36,-45,8,6); }
+            if(foto) { c.save(); c.translate(10.7, -69.6); c.scale(dir||1, 1); c.fillStyle = perfil.corPele; c.fillRect(-12,-12,24,24); c.drawImage(foto,-10,-10,20,20); c.restore(); }
+        }
+        function drawMonstro(c, stun) { drawRects(c, SPR_MON(stun ? '#7a3a9a' : '#b37a00'), 310, 775, 0.115, false); }
+
+        function lerMeuPerfil() { return { nome: document.getElementById('meuNome').value || "P"+Math.floor(Math.random()*100), corPele: document.getElementById('minhaPele').value, corRoupa: document.getElementById('minhaRoupa').value, acessorio: 'nenhum' }; }
+
         function atualizarPreview() {
-            let ctx = document.getElementById('previewCanvas').getContext('2d');
-            ctx.clearRect(0,0,80,100); ctx.save(); ctx.translate(40, 80);
-            let pele = document.getElementById('minhaPele').value; let roupa = document.getElementById('minhaRoupa').value; let ac = document.getElementById('meuAcessorio').value;
-            ctx.fillStyle = roupa; ctx.fillRect(-10, -50, 20, 30); 
-            ctx.fillStyle = pele; ctx.beginPath(); ctx.arc(0, -60, 12, 0, Math.PI * 2); ctx.fill(); 
-            ctx.fillStyle = '#111'; ctx.fillRect(-8, -20, 7, 20); ctx.fillRect(1, -20, 7, 20); 
-            
-            if(ac === 'bone') { ctx.fillStyle='red'; ctx.fillRect(-12,-72,24,12); ctx.fillRect(0,-65,18,5); }
-            else if(ac === 'cartola') { ctx.fillStyle='black'; ctx.fillRect(-15,-70,30,5); ctx.fillRect(-10,-95,20,25); }
-            else if(ac === 'mascara') { ctx.fillStyle='#ddd'; ctx.beginPath(); ctx.arc(0,-60,13,0,Math.PI*2); ctx.fill(); ctx.fillStyle='black'; ctx.fillRect(-5,-63,3,3); ctx.fillRect(2,-63,3,3); }
-            ctx.restore();
+            let c = document.getElementById('previewCanvas').getContext('2d');
+            c.clearRect(0,0,80,100); c.save(); c.translate(14, 96); c.scale(1.1, 1.1);
+            drawSobrevivente(c, lerMeuPerfil(), false, getFoto('__me'), 1);
+            c.restore();
         }
 
         let editandoTouch = false;
@@ -263,12 +296,14 @@
         document.querySelectorAll('.t-btn').forEach(btn => {
             let isDragging = false; let offset = {x:0, y:0};
             btn.addEventListener('touchstart', e => {
+                e.preventDefault();
                 if(editandoTouch) {
                     isDragging = true; let touch = e.touches[0];
                     let rect = btn.getBoundingClientRect(); offset.x = touch.clientX - rect.left; offset.y = touch.clientY - rect.top;
-                } else { chavesState[btn.id.split('_')[1]] = true; } // Aciona jogo
-            });
+                } else { let k = btn.id.split('_')[1]; chavesState[k] = true; if(ACOES.includes(k)) minhaAcao = k; }
+            }, {passive:false});
             btn.addEventListener('touchmove', e => {
+                e.preventDefault();
                 if(isDragging && editandoTouch) {
                     let touch = e.touches[0];
                     btn.style.left = (touch.clientX - offset.x) + 'px'; btn.style.top = (touch.clientY - offset.y) + 'px';
@@ -278,6 +313,7 @@
                 if(editandoTouch) { isDragging = false; touchPositions[btn.id] = { left: btn.style.left, top: btn.style.top }; localStorage.setItem('fnaf_touch', JSON.stringify(touchPositions)); } 
                 else { chavesState[btn.id.split('_')[1]] = false; }
             });
+            btn.addEventListener('touchcancel', e => { chavesState[btn.id.split('_')[1]] = false; });
             // Restaura posições
             if(touchPositions[btn.id]) { btn.style.left = touchPositions[btn.id].left; btn.style.top = touchPositions[btn.id].top; }
         });
@@ -322,20 +358,21 @@
         // REDE, BOTS E INÍCIO DE JOGO
         // ==========================================
         function criarJogo() {
+            if(typeof Peer === 'undefined') { alert('Não foi possível carregar a biblioteca de rede (PeerJS). Verifique a internet.'); return; }
             meuPerfil = lerMeuPerfil(); let num = Math.floor(Math.random()*900)+100; peer = new Peer(PREFIXO+num);
-            peer.on('error', (err) => {
-                alert("Falha na conexão WebRTC: " + err.type + ". Tente outro código ou verifique a sua rede.");
-                location.reload();
+            peer.on('error', e => {
+                if(e.type === 'unavailable-id') { try{ peer.destroy(); }catch(_){} criarJogo(); }
+                else alert('Erro de rede: ' + e.type);
             });
             peer.on('open', (id) => {
-                meuId = id; souHost = true; meuTipo = 'assassino';
-                gameState.jogadores[id] = { perfil: meuPerfil, tipo: 'assassino', classeMonstro: 'Lobisomem', carta1: null, carta2: null, x: 500, y: 300, andar: 2, direcao: -1, estado: 'vivo', lanterna: false, item: 'nenhum', vidas: 99, cdStun: 0, cdAtq: 0, cdHabG: 0, cdHabH: 0, radarH: 0, cdQ: 0 };
+                meuId = id; souHost = true; meuTipo = 'assassino'; if(meuFotoData) fotosData[id] = meuFotoData;
+                gameState.jogadores[id] = { perfil: meuPerfil, tipo: 'assassino', classeMonstro: 'Coelho', carta1: null, carta2: null, x: 500, y: 300, andar: 2, direcao: -1, estado: 'vivo', lanterna: false, item: 'nenhum', vidas: 99, cdStun: 0, cdAtq: 0, cdHabG: 0, cdHabH: 0, radarH: 0, cdQ: 0 };
                 document.getElementById('menu').style.display='none'; document.getElementById('lobby').style.display='block'; document.getElementById('codigoLobby').innerText=num; document.getElementById('areaHostConfig').style.display='block'; document.getElementById('btnComecar').style.display='block'; atualizarLobbyHost();
             });
             peer.on('connection', c => {
                 conexoes.push(c);
                 c.on('data', d => {
-                    if(d.tipo==='perfil') { gameState.jogadores[c.peer] = { perfil:d.perfil, tipo:'sobrevivente', x:200, y:700, andar:0, direcao:1, estado:'vivo', lanterna:false, item:'nenhum', vidas:3, qteC:0, qteT:0, cdQ:0, invisivel:0, isBot:false }; atualizarLobbyHost(); }
+                    if(d.tipo==='perfil') { if(d.foto) fotosData[c.peer] = d.foto; gameState.jogadores[c.peer] = { perfil:d.perfil, tipo:'sobrevivente', x:200, y:700, andar:0, direcao:1, estado:'vivo', lanterna:false, item:'nenhum', vidas:3, qteC:0, qteT:0, cdQ:0, invisivel:0, isBot:false }; atualizarLobbyHost(); }
                     else if(d.tipo==='input') processarInput(c.peer, d);
                     else if(d.tipo==='escolher_carta') { let cx = arcanosMaiores.S.find(x=>x.id===d.cartaId); if(gameState.fase===1) gameState.jogadores[c.peer].carta1=cx; gameState.jogadores[c.peer].estado='vivo'; }
                 });
@@ -344,39 +381,55 @@
         }
 
         function entrarJogo() {
-            const num = document.getElementById('idHost').value; if(!num) return;
+            const num = document.getElementById('idHost').value.trim(); if(!num) return;
             meuPerfil = lerMeuPerfil(); 
             
-            // MODO BOTS
-            if(num === '007') {
-                isTestMode = true; souHost = true; meuId = 'eu'; meuTipo = 'assassino'; unlockConquista('bots', 'Treino');
-                gameState.jogadores[meuId] = { perfil: meuPerfil, tipo: 'assassino', classeMonstro: 'Lobisomem', x: 500, y: 300, andar: 2, direcao: -1, estado: 'vivo', lanterna: false, item: 'nenhum', vidas: 99, cdStun: 0, cdAtq: 0, cdHabG: 0, cdHabH: 0, radarH: 0, cdQ: 0 };
-                for(let i=1; i<=3; i++) {
-                    gameState.jogadores['bot'+i] = { perfil: {nome:"Bot "+i, corPele:"#ffcc99", corRoupa:"#2b60de", acessorio:"nenhum"}, tipo:'sobrevivente', x:300*i, y:700, andar:0, direcao:1, estado:'vivo', lanterna:true, item:'nenhum', vidas:3, qteC:0, qteT:0, cdQ:0, invisivel:0, isBot:true, botDir:1 };
-                }
-                hostComecarPartida(); return;
-            }
-
-            peer = new Peer(); 
-            peer.on('error', (err) => {
-                alert("Falha na conexão WebRTC: " + err.type + ". Tente outro código ou verifique a sua rede.");
-                location.reload();
-            });
+            if(typeof Peer === 'undefined') { alert('Não foi possível carregar a biblioteca de rede (PeerJS). Verifique a internet.'); return; }
+            peer = new Peer();
+            peer.on('error', e => { alert(e.type==='peer-unavailable' ? 'Sala não encontrada. Confira o código.' : 'Erro de ligação: ' + e.type); });
             peer.on('open', (id) => {
-                meuId = id; const c = peer.connect(PREFIXO+num); meuTipo = 'sobrevivente';
-                c.on('open', () => { conexoes.push(c); c.send({tipo:'perfil', perfil:meuPerfil}); document.getElementById('menu').style.display='none'; document.getElementById('lobby').style.display='block'; document.getElementById('codigoLobby').innerText=num; document.getElementById('msgAguardando').style.display='block'; });
+                meuId = id; meuTipo = 'sobrevivente';
+                const c = peer.connect(PREFIXO+num, { reliable: true });
+                const timer = setTimeout(() => { if(!c.open) alert('Não foi possível ligar à sala. Confirme o código e se o host já criou a sala.'); }, 12000);
+                c.on('open', () => {
+                    clearTimeout(timer); conexoes.push(c); c.send({tipo:'perfil', perfil:meuPerfil, foto:meuFotoData});
+                    document.getElementById('menu').style.display='none'; document.getElementById('lobby').style.display='block';
+                    document.getElementById('codigoLobby').innerText=num; document.getElementById('msgAguardando').style.display='block';
+                });
+                c.on('close', () => { alert('Ligação com o host perdida.'); location.reload(); });
                 c.on('data', d => {
                     if(d.tipo==='lobby_update') { let html=""; d.lista.forEach(j=>{html+=`<div class="jogador-item"><span style="color:${j.cor}">${j.tipo==='assassino'?'🔪':'🏃'} ${j.nome}</span></div>`;}); document.getElementById('listaJogadores').innerHTML=html; }
-                    else if(d.tipo==='iniciar_jogo') { gameState = d.est; mostrarTelaTarot(d.ops); emJogo=true; document.getElementById('btnMenuInGame').style.display='block';}
+                    else if(d.tipo==='iniciar_jogo') { gameState = d.est; Object.assign(fotosData, d.fotos||{}); emJogo=true; mostrarTelaTarot(d.ops); document.getElementById('btnMenuInGame').style.display='block'; iniciarCanvas(); }
                     else if(d.tipo==='est') gameState = d.est;
+                    else if(d.tipo==='fotos') Object.assign(fotosData, d.d);
                 });
             });
         }
 
+        function iniciarTreino() {
+            meuPerfil = lerMeuPerfil(); dificuldade = document.getElementById('dificuldade').value;
+            let papel = document.getElementById('papelTreino').value;
+            let n = parseInt(document.getElementById('qtdBots').value); if(isNaN(n)) n = 3; n = Math.max(papel==='assassino'?1:0, Math.min(7, n));
+            document.getElementById('qtdGeradores').value = Math.max(1, Math.min(8, parseInt(document.getElementById('qtdGenTreino').value) || 3));
+            document.getElementById('extraChaves').checked = document.getElementById('extraChavesTreino').checked;
+            document.getElementById('qtdChaves').value = document.getElementById('qtdChavesTreino').value;
+            document.getElementById('menu').style.display = 'none';
+            isTestMode = true; souHost = true; meuId = 'eu'; meuTipo = papel; unlockConquista('bots', 'Treino');
+            if(meuFotoData) fotosData['eu'] = meuFotoData;
+            const AND = gameState.mapaFisico.andares;
+            const monstro = (perfil, bot) => ({ perfil, tipo:'assassino', classeMonstro:'Coelho', x:500, y:AND[2], andar:2, direcao:-1, estado:'vivo', lanterna:false, item:'nenhum', vidas:99, cdStun:0, cdAtq:0, cdHabG:0, cdHabH:0, radarH:0, cdQ:0, isBot:bot });
+            const sobr = (perfil, andar, x, bot) => ({ perfil, tipo:'sobrevivente', x, y:AND[andar], andar, direcao:1, estado:'vivo', lanterna:true, item:'nenhum', vidas:3, qteC:0, qteT:0, cdQ:0, invisivel:0, isBot:bot, botDir:1 });
+            if(papel === 'assassino') gameState.jogadores['eu'] = monstro(meuPerfil, false);
+            else { gameState.jogadores['eu'] = sobr(meuPerfil, 0, 200, false); gameState.jogadores['botK'] = monstro({nome:'Coelho', corPele:'#b37a00', corRoupa:'#b37a00', acessorio:'nenhum'}, true); }
+            const cores = ['#3a7bd5','#d54a3a','#3aa655','#d5a83a','#d53a9c','#3ad5d0','#888888','#774f9c'];
+            for(let i=0; i<n; i++) gameState.jogadores['bot'+i] = sobr({nome:'Bot '+(i+1), corPele:cores[i%cores.length], corRoupa:'#a8832a', acessorio:'nenhum'}, (i+1)%3, 300+i*250, true);
+            hostComecarPartida();
+        }
+
         function atualizarLobbyHost() {
-            gameState.modo = document.getElementById('modoJogo').value;
-            let lista = Object.values(gameState.jogadores).map(j=>({nome:j.perfil.nome, tipo:j.tipo, cor:j.tipo==='assassino'?'red':j.perfil.corRoupa}));
-            conexoes.forEach(c=>{ if(c.open) c.send({tipo:'lobby_update', lista:lista}); });
+            
+            let lista = Object.values(gameState.jogadores).map(j=>({nome:j.perfil.nome, tipo:j.tipo, cor:j.tipo==='assassino'?'red':j.perfil.corPele}));
+            conexoes.forEach(c=>{ if(c.open) { c.send({tipo:'lobby_update', lista:lista}); c.send({tipo:'fotos', d:fotosData}); } });
             let html=""; lista.forEach(j=>{html+=`<div class="jogador-item"><span style="color:${j.cor}">${j.tipo==='assassino'?'🔪':'🏃'} ${j.nome}</span></div>`;}); document.getElementById('listaJogadores').innerHTML=html;
         }
 
@@ -388,7 +441,7 @@
                 let ops = (p.tipo==='assassino'?[...arcanosMaiores.M]:[...arcanosMaiores.S]).sort(()=>0.5-Math.random()).slice(0,3);
                 if(id===meuId) mostrarTelaTarot(ops);
                 else if(p.isBot) { p.carta1 = ops[0]; p.estado = 'vivo'; }
-                else { let c = conexoes.find(x=>x.peer===id); if(c&&c.open) c.send({tipo:'iniciar_jogo', est:gameState, ops:ops}); }
+                else { let c = conexoes.find(x=>x.peer===id); if(c&&c.open) c.send({tipo:'iniciar_jogo', est:gameState, ops:ops, fotos:fotosData}); }
             }
             emJogo = true; document.getElementById('btnMenuInGame').style.display='block'; iniciarCanvas();
         }
@@ -453,7 +506,7 @@
         function temCarta(p, idC) { return p.carta1 && p.carta1.id === idC; }
 
         function processarAcoes(id, acao, p) {
-            if (p.estado==='morto' || p.estado.includes('escolhendo')) return;
+            if (p.estado==='morto' || p.estado==='escapou' || p.estado.includes('escolhendo') || gameState.fase===3) return;
             
             if(acao==='luz') p.lanterna = !p.lanterna;
             if (p.estado==='agarrado') { if (acao==='acao') p.qteC++; return; }
@@ -493,37 +546,74 @@
         }
 
         function processarInput(id, input) {
-            let p = gameState.jogadores[id]; if (!p || p.estado==='morto') return;
+            let p = gameState.jogadores[id]; if (!p || p.estado==='morto' || p.estado==='escapou') return;
             if (p.estado!=='agarrado') { p.x = input.x; p.y = input.y; p.andar = input.andar; p.direcao = input.direcao; }
             if (input.acao) processarAcoes(id, input.acao, p);
         }
 
+const DIFS = { facil:{velS:3,velM:2.6,fuga:110,lutar:0.1,rep:20}, medio:{velS:4,velM:3.6,fuga:180,lutar:0.18,rep:12}, dificil:{velS:4.8,velM:5,fuga:260,lutar:0.26,rep:8}, parado:{velS:0,velM:0,fuga:0,lutar:0.1,rep:0} };
+        let dificuldade = 'medio';
+        function distAlvo(b, a) { return Math.abs(a.andar-b.andar)*2000 + Math.abs(a.x-b.x); }
+        function navegar(b, alvo, vel) {
+            const M = gameState.mapaFisico; let tx = alvo.x;
+            if(alvo.andar !== b.andar) {
+                let sobe = alvo.andar > b.andar;
+                let es = M.escadas.filter(e => sobe ? e.deAndar === b.andar : e.paraAndar === b.andar);
+                es.sort((a,c) => Math.abs(a.x-b.x) - Math.abs(c.x-b.x));
+                if(!es.length) return false;
+                tx = es[0].x;
+                if(Math.abs(b.x-tx) < 8) { b.andar = sobe ? es[0].paraAndar : es[0].deAndar; b.y = M.andares[b.andar]; return false; }
+            }
+            let d = tx - b.x;
+            if(Math.abs(d) > 6) {
+                let dir = d > 0 ? 1 : -1, nx = b.x + dir*vel; b.direcao = dir; b.botDir = dir;
+                if(b.tipo === 'assassino') {
+                    let bloq = gameState.portas.find(pt => pt.estado==='trancada' && pt.andar===b.andar && ((b.x<pt.x && nx>=pt.x-20) || (b.x>pt.x && nx<=pt.x+20)));
+                    if(bloq) { if(b.ia % 50 === 0) bloq.estado = 'quebrada'; return false; }
+                }
+                b.x = Math.max(30, Math.min(M.largura-30, nx)); return false;
+            }
+            return alvo.andar === b.andar;
+        }
         function IA_Bots() {
+            const D = DIFS[dificuldade] || DIFS.medio, M = gameState.mapaFisico;
+            const killer = Object.values(gameState.jogadores).find(j => j.tipo === 'assassino');
             for(let id in gameState.jogadores) {
-                let b = gameState.jogadores[id];
-                if(b.isBot && b.estado==='vivo') {
-                    // IA BÁSICA: Andar de um lado pro outro, reparar gerador que ver, subir escada aleatória
-                    b.x += b.botDir * 4;
-                    if(b.x < 100) b.botDir = 1; if(b.x > gameState.mapaFisico.largura-100) b.botDir = -1;
-                    b.direcao = b.botDir;
-                    
-                    // Reparar e Subir escada (Sorte 2%)
-                    if(Math.random() < 0.02) {
-                        processarAcoes(id, 'acao', b);
-                        gameState.mapaFisico.escadas.forEach(e => {
-                            if(Math.abs(b.x-e.x)<30) { if(b.andar===e.deAndar) b.andar=e.paraAndar; else if(b.andar===e.paraAndar) b.andar=e.deAndar; }
-                        });
-                    }
+                let b = gameState.jogadores[id]; if(!b.isBot) continue;
+                if(b.estado === 'agarrado') { if(Math.random() < D.lutar) processarAcoes(id, 'acao', b); continue; }
+                if(b.estado !== 'vivo') continue;
+                b.y = M.andares[b.andar]; b.ia = (b.ia||0) + 1;
+                if(D.velS === 0) continue;
+                if(b.tipo === 'assassino') {
+                    if(b.cdStun > 0) continue;
+                    let vs = Object.values(gameState.jogadores);
+                    if(vs.some(j => j.estado==='agarrado' && j.andar===b.andar && Math.abs(j.x-b.x)<80)) continue;
+                    let alvos = vs.filter(j => j.tipo==='sobrevivente' && j.estado==='vivo').sort((a,c) => distAlvo(b,a) - distAlvo(b,c));
+                    if(!alvos.length) continue;
+                    let t = alvos[0];
+                    if(t.andar===b.andar && Math.abs(t.x-b.x)<50) { b.direcao = t.x>=b.x ? 1 : -1; if(b.cdAtq===0) processarAcoes(id, 'acao', b); }
+                    else navegar(b, {x:t.x, andar:t.andar}, D.velM);
+                    continue;
                 }
-                else if (b.isBot && b.estado === 'agarrado') {
-                    if(Math.random() < 0.2) processarAcoes(id, 'acao', b); // Clica E as vezes
+                if(killer && killer.estado!=='morto' && killer.andar===b.andar && Math.abs(killer.x-b.x) < D.fuga) {
+                    b.botDir = b.x >= killer.x ? 1 : -1; b.direcao = b.botDir;
+                    b.x = Math.max(30, Math.min(M.largura-30, b.x + b.botDir*D.velS)); continue;
                 }
+                let alvo = null;
+                if(gameState.fase === 2) alvo = { x: gameState.portaSaida.x, andar: gameState.portaSaida.andar };
+                else {
+                    alvo = gameState.geradores.filter(g => g.ativo && !g.ligado).sort((a,c) => distAlvo(b,a) - distAlvo(b,c))[0] || null;
+                    if(!alvo && gameState.luzes) alvo = gameState.chavesItem.filter(k => !k.pego).sort((a,c) => distAlvo(b,a) - distAlvo(b,c))[0] || null;
+                }
+                if(!alvo) continue;
+                let chegou = navegar(b, alvo, D.velS);
+                if(chegou && gameState.fase === 1 && gameState.geradores.some(g => g.ativo && !g.ligado && g.andar===b.andar && Math.abs(g.x-b.x)<50) && b.ia % D.rep === 0) processarAcoes(id, 'acao', b);
             }
         }
 
-        function hostLogicaFrame() {
+                function hostLogicaFrame() {
             let hostP = gameState.jogadores[meuId];
-            if(isTestMode) IA_Bots();
+            if(isTestMode && gameState.fase !== 3) IA_Bots();
 
             for (let id in gameState.jogadores) {
                 let p = gameState.jogadores[id];
@@ -537,20 +627,46 @@
                     }
                 }
             }
+            // Objetivo, fuga e fim de jogo
+            if(gameState.fase === 1 && gameState.geradoresRestantes <= 0) {
+                if(gameState.extraChaves && !gameState.luzes) { gameState.luzes = true; gerarChaves(); }
+                gameState.chavesItem.forEach(k => { if(k.pego) return;
+                    for(let id in gameState.jogadores) { let p = gameState.jogadores[id];
+                        if(p.tipo==='sobrevivente' && p.estado==='vivo' && p.andar===k.andar && Math.abs(p.x-k.x)<30) { k.pego = true; gameState.chavesColetadas++; break; } } });
+                if(!gameState.extraChaves || gameState.chavesColetadas >= gameState.chavesNecessarias) { gameState.fase = 2; gameState.portaSaida.aberta = true; }
+            }
+            if(gameState.fase === 2) {
+                for(let id in gameState.jogadores) {
+                    let p = gameState.jogadores[id];
+                    if(p.tipo==='sobrevivente' && p.estado==='vivo' && p.andar===gameState.portaSaida.andar && Math.abs(p.x-gameState.portaSaida.x)<40) p.estado = 'escapou';
+                }
+            }
+            if(gameState.fase === 1 || gameState.fase === 2) {
+                let sobs = Object.values(gameState.jogadores).filter(j => j.tipo==='sobrevivente');
+                if(sobs.length && !sobs.some(j => j.estado==='vivo' || j.estado==='agarrado' || j.estado.includes('escolhendo'))) gameState.fase = 3;
+            }
             if(minhaAcao) processarAcoes(meuId, minhaAcao, hostP);
-            if(!isTestMode) conexoes.forEach(c=>{ if(c.open) c.send({tipo:'est', est:gameState}); });
+            frameNet++; if(!isTestMode && frameNet % 2 === 0) conexoes.forEach(c=>{ if(c.open) c.send({tipo:'est', est:gameState}); });
             minhaAcao = null; 
         }
 
-        function iniciarCanvas() { let m = gameState.jogadores[meuId]; inputPlayer.x=m.x; inputPlayer.y=m.y; inputPlayer.andar=m.andar; window.addEventListener('resize', ()=>{canvas.width=window.innerWidth; canvas.height=window.innerHeight;}); canvas.width=window.innerWidth; canvas.height=window.innerHeight; loopDeJogo(); }
+        function iniciarCanvas() {
+            if(canvasIniciado) return; canvasIniciado = true;
+            let m = gameState.jogadores[meuId]; inputPlayer.x=m.x; inputPlayer.y=m.y; inputPlayer.andar=m.andar; inputPlayer.direcao=m.direcao;
+            window.addEventListener('resize', ()=>{canvas.width=window.innerWidth; canvas.height=window.innerHeight;});
+            canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+            if('ontouchstart' in window || navigator.maxTouchPoints > 0) document.getElementById('touchUI').style.display='block';
+            loopDeJogo();
+        }
 
         function atualizar() {
             if (!emJogo || document.getElementById('overlayOpcoes').style.display==='block') return;
             pollGamepads(); // Le comando PS4
             
-            let p = gameState.jogadores[meuId]; if (!p || p.estado.includes('escolhendo')) return;
+            let p = gameState.jogadores[meuId]; if (!p) return;
+            if (p.estado.includes('escolhendo')) { if (souHost) hostLogicaFrame(); return; }
 
-            let travado = (p.estado==='agarrado' || p.estado==='morto' || (p.tipo==='assassino'&&p.cdStun>0));
+            let travado = (p.estado==='agarrado' || p.estado==='morto' || p.estado==='escapou' || gameState.fase===3 || (p.tipo==='assassino'&&p.cdStun>0));
             if (!travado) {
                 let vel = p.tipo==='assassino' ? (temCarta(p,15)?6:5) : (temCarta(p,6)?5.8:5); 
                 let novoX = inputPlayer.x;
@@ -583,20 +699,20 @@
         // ==========================================
         // GRÁFICOS (Render)
         // ==========================================
-        const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        
         function desenharMinimapa() {
             let hostP = gameState.jogadores[meuId];
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(canvas.width-220, 10, 200, 100); ctx.strokeStyle = '#444'; ctx.strokeRect(canvas.width-220, 10, 200, 100);
             
             let sX = 200/gameState.mapaFisico.largura; let sY = 100/1000;
             ctx.save(); ctx.translate(canvas.width-220, 10);
-            gameState.geradores.forEach(g=>{ if(g.ativo) { ctx.fillStyle = g.ligado?'#0f0':'yellow'; ctx.fillRect(g.x*sX, g.y*sY-5, 4, 4); } });
+            gameState.mapaFisico.escadas.forEach(e=>{ ctx.fillStyle='#8af'; ctx.fillRect(e.x*sX-1, ((gameState.mapaFisico.andares[e.deAndar]+gameState.mapaFisico.andares[e.paraAndar])/2)*sY-8, 2, 10); });
+            gameState.chavesItem.forEach(k=>{ if(!k.pego) { ctx.fillStyle='#fd0'; ctx.fillRect(k.x*sX, gameState.mapaFisico.andares[k.andar]*sY-5, 4, 4); } });
+            gameState.geradores.forEach(g=>{ if(g.ativo) { ctx.fillStyle = g.ligado?'#0f0':'yellow'; ctx.fillRect(g.x*sX, gameState.mapaFisico.andares[g.andar]*sY-5, 4, 4); } });
             
             for(let id in gameState.jogadores) {
                 let p = gameState.jogadores[id];
-                if(p.estado==='morto') continue;
+                if(p.estado==='morto' || p.estado==='escapou') continue;
                 let ver = false;
                 if (meuTipo==='assassino') { if (p.tipo==='assassino' || hostP.radarH>0) ver = true; } else { if (p.tipo==='sobrevivente') ver = true; }
                 if (ver) { ctx.fillStyle = p.tipo==='assassino'?'red':'cyan'; ctx.beginPath(); ctx.arc(p.x*sX, p.y*sY-5, 3, 0, Math.PI*2); ctx.fill(); }
@@ -608,6 +724,8 @@
             if(!emJogo) return;
             ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             let meuObj = gameState.jogadores[meuId]; if(!meuObj || meuObj.estado.includes('escolhendo')) return;
+            if(!souHost && meuObj.estado!=='agarrado') { meuObj.x=inputPlayer.x; meuObj.y=inputPlayer.y; meuObj.andar=inputPlayer.andar; meuObj.direcao=inputPlayer.direcao; }
+            ctx.font = '12px monospace'; ctx.textAlign = 'left';
 
             ctx.save();
             const camX = canvas.width/2 - meuObj.x; const camY = canvas.height/2 - meuObj.y + 100; 
@@ -616,7 +734,7 @@
             // Cenário Dinâmico
             let chao = gameState.mapaFisico.andares;
             for (let i=0; i<chao.length; i++) { ctx.fillStyle='#1a1614'; ctx.fillRect(0, chao[i]-200, gameState.mapaFisico.largura, 200); ctx.fillStyle='#261b17'; ctx.fillRect(0, chao[i], gameState.mapaFisico.largura, 20); }
-            gameState.mapaFisico.escadas.forEach(e => { ctx.fillStyle='#111'; ctx.fillRect(e.x-30, chao[e.deAndar]-120, 60, 120); ctx.fillRect(e.x-30, chao[e.paraAndar]-120, 60, 120); });
+            gameState.mapaFisico.escadas.forEach(e => { [e.deAndar, e.paraAndar].forEach(a => { ctx.fillStyle='#2a2f45'; ctx.fillRect(e.x-30, chao[a]-120, 60, 120); ctx.fillStyle='#3d4466'; for(let i=0;i<6;i++) ctx.fillRect(e.x-30, chao[a]-120+i*20, 60, 4); }); });
             
             gameState.portas.forEach(p => {
                 if(p.estado!=='quebrada') { let y = chao[p.andar]; ctx.fillStyle = p.estado==='trancada'?'#411':'#421'; ctx.fillRect(p.x-10, y-100, 20, 100); ctx.fillStyle='white'; ctx.fillText(p.estado==='trancada'?"TRANCADA":"PORTA", p.x-15, y-110); }
@@ -631,48 +749,95 @@
                 if(!g.ligado) { ctx.fillStyle='yellow'; ctx.fillRect(g.x-25, y-70, (g.progresso/100)*50, 8); }
             });
 
+            gameState.chavesItem.forEach(k => { if(k.pego) return; let y = chao[k.andar]; ctx.fillStyle='#ffd700'; ctx.beginPath(); ctx.arc(k.x, y-30, 8, 0, 6.3); ctx.fill(); ctx.fillRect(k.x+6, y-32, 16, 4); ctx.fillRect(k.x+16, y-32, 4, 10); ctx.fillStyle='#fff'; ctx.fillText('CHAVE', k.x-14, y-48); });
+            { let ps = gameState.portaSaida, ys = chao[ps.andar];
+              ctx.fillStyle = ps.aberta ? '#2a8' : '#322'; ctx.fillRect(ps.x-28, ys-120, 56, 120);
+              ctx.fillStyle = '#fff'; ctx.fillText(ps.aberta ? 'SAÍDA' : 'SAÍDA (fechada)', ps.x-30, ys-128); }
             // Jogadores
             for (let id in gameState.jogadores) {
                 let p = gameState.jogadores[id];
-                if(p.estado==='morto' || p.andar!==meuObj.andar || (p.invisivel>0 && meuTipo==='assassino')) continue; 
-                ctx.save(); ctx.translate(p.x, p.y); ctx.scale(p.direcao, 1); 
-                if (p.tipo==='assassino') {
-                    ctx.fillStyle = (p.cdStun>0)?'#505':'#111';
-                    if (p.classeMonstro==='Vampiro') { ctx.fillRect(-15,-70,30,45); ctx.fillStyle='red'; ctx.fillRect(-5,-80,10,10); } 
-                    else if (p.classeMonstro==='Lobisomem') { ctx.fillStyle=(p.cdStun>0)?'#505':'#4a2f18'; ctx.fillRect(-20,-75,40,50); ctx.fillStyle='yellow'; ctx.fillRect(0,-85,5,5); }
-                    else { ctx.fillStyle=(p.cdStun>0)?'purple':'rgba(200,255,255,0.7)'; ctx.beginPath(); ctx.moveTo(-15,-20); ctx.lineTo(0,-90); ctx.lineTo(15,-20); ctx.fill(); }
-                } else {
-                    ctx.fillStyle = p.perfil.corRoupa; ctx.fillRect(-10,-50,20,30); ctx.fillStyle = p.perfil.corPele; ctx.fillRect(-10,-70,20,20); ctx.fillStyle = '#111'; ctx.fillRect(-8,-20,7,20); ctx.fillRect(1,-20,7,20); 
-                    if(p.lanterna) { ctx.fillStyle='yellow'; ctx.fillRect(5,-45,10,5); }
-                }
+                if(p.estado==='morto' || p.estado==='escapou' || p.andar!==meuObj.andar || (p.invisivel>0 && meuTipo==='assassino')) continue; 
+                ctx.save(); ctx.translate(Math.round(p.x), Math.round(p.y)); ctx.scale(p.direcao||1, 1); 
+                if (p.tipo==='assassino') drawMonstro(ctx, p.cdStun>0); else drawSobrevivente(ctx, p.perfil, p.lanterna, getFoto(id), p.direcao||1);
                 ctx.restore();
+                if (p.tipo==='sobrevivente') { ctx.fillStyle='#fff'; ctx.fillText(p.perfil.nome, p.x-20, p.y-95); }
                 if (p.estado==='agarrado') { ctx.fillStyle='red'; ctx.fillRect(p.x-30, p.y-125, (p.qteC/10)*60, 10); ctx.fillText("Aperte E!", p.x-25, p.y-130); }
             }
             ctx.restore();
 
-            // Escuridão Fog
-            ctx.save(); ctx.translate(camX, camY);
-            ctx.globalCompositeOperation = "source-over"; ctx.fillStyle = "rgba(0,0,0,0.9)"; ctx.fillRect(0, chao[meuObj.andar]-250, gameState.mapaFisico.largura, 300);
-            ctx.globalCompositeOperation = "destination-out";
+            // Escuridão (canvas separado, para não apagar o cenário)
+            if(!fogCanvas) fogCanvas = document.createElement('canvas');
+            if(fogCanvas.width!==canvas.width || fogCanvas.height!==canvas.height) { fogCanvas.width=canvas.width; fogCanvas.height=canvas.height; }
+            const fctx = fogCanvas.getContext('2d');
+            fctx.globalCompositeOperation = 'source-over'; fctx.clearRect(0,0,fogCanvas.width,fogCanvas.height);
+            fctx.fillStyle = gameState.luzes ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.93)'; fctx.fillRect(0,0,fogCanvas.width,fogCanvas.height);
+            fctx.globalCompositeOperation = 'destination-out';
+            fctx.save(); fctx.translate(camX, camY);
             for(let id in gameState.jogadores) {
                 let p = gameState.jogadores[id];
-                if(p.andar===meuObj.andar && p.estado!=='morto') {
-                    let grad = ctx.createRadialGradient(p.x, p.y-50, 10, p.x, p.y-50, 200); grad.addColorStop(0,'rgba(255,255,255,1)'); grad.addColorStop(1,'rgba(255,255,255,0)');
-                    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(p.x, p.y-50, 200, 0, Math.PI*2); ctx.fill();
-                    if(p.lanterna) { ctx.beginPath(); ctx.moveTo(p.x, p.y-50); ctx.arc(p.x, p.y-50, 400, (p.direcao===1?-0.3:Math.PI-0.3), (p.direcao===1?0.3:Math.PI+0.3)); ctx.fill(); }
+                if(p.andar!==meuObj.andar || p.estado==='morto' || p.estado==='escapou') continue;
+                let grad = fctx.createRadialGradient(p.x, p.y-50, 10, p.x, p.y-50, 200); grad.addColorStop(0,'rgba(255,255,255,1)'); grad.addColorStop(1,'rgba(255,255,255,0)');
+                fctx.fillStyle = grad; fctx.beginPath(); fctx.arc(p.x, p.y-50, 200, 0, Math.PI*2); fctx.fill();
+                if(p.lanterna) {
+                    let g2 = fctx.createRadialGradient(p.x, p.y-50, 10, p.x, p.y-50, 450); g2.addColorStop(0,'rgba(255,255,255,1)'); g2.addColorStop(1,'rgba(255,255,255,0)');
+                    fctx.fillStyle = g2; fctx.beginPath(); fctx.moveTo(p.x, p.y-50);
+                    fctx.arc(p.x, p.y-50, 450, (p.direcao===1?-0.3:Math.PI-0.3), (p.direcao===1?0.3:Math.PI+0.3)); fctx.closePath(); fctx.fill();
                 }
             }
-            ctx.restore();
+            if(gameState.portaSaida.aberta && meuObj.andar===gameState.portaSaida.andar) {
+                let ps = gameState.portaSaida, gd = fctx.createRadialGradient(ps.x, chao[0]-60, 10, ps.x, chao[0]-60, 170); gd.addColorStop(0,'rgba(255,255,255,1)'); gd.addColorStop(1,'rgba(255,255,255,0)');
+                fctx.fillStyle = gd; fctx.beginPath(); fctx.arc(ps.x, chao[0]-60, 170, 0, Math.PI*2); fctx.fill();
+            }
+            fctx.restore();
+            ctx.drawImage(fogCanvas, 0, 0);
+            desenharEscadas(meuObj, camX, camY);
 
             // HUD
-            desenharMinimapa();
+            desenharMinimapa(); desenharDicas(meuObj); desenharFim(meuObj);
             ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(10, 50, 200, 100); ctx.fillStyle = 'white'; ctx.textAlign = 'left'; ctx.font = '14px monospace';
             if (meuTipo==='sobrevivente') {
-                ctx.fillText("Vidas: "+"❤️".repeat(meuObj.vidas), 20, 70); ctx.fillText("Gens: "+gameState.geradoresRestantes, 20, 90); ctx.fillText(`Item: `+meuObj.item, 20, 110);
+                ctx.fillText("Vidas: "+"❤️".repeat(meuObj.vidas), 20, 70); ctx.fillText(textoObjetivo(), 20, 90); ctx.fillText(`Item: `+meuObj.item, 20, 110);
                 if(meuObj.estado==='morto') { ctx.fillStyle='red'; ctx.font='40px Arial'; ctx.fillText("MORREU", canvas.width/2, canvas.height/2); }
+                if(meuObj.estado==='escapou') unlockConquista('fuga', 'Fuga');
             } else {
-                ctx.fillStyle='red'; ctx.fillText(meuObj.classeMonstro, 20, 70); ctx.fillStyle='white'; ctx.fillText(`Destruir: `+(meuObj.cdHabG<=0?"PRONTO":Math.ceil(meuObj.cdHabG/60)), 20, 90);
+                ctx.fillStyle='red'; ctx.fillText(meuObj.classeMonstro, 20, 70); ctx.fillStyle='white'; ctx.fillText(`Destruir: `+(meuObj.cdHabG<=0?"PRONTO":Math.ceil(meuObj.cdHabG/60)), 20, 90); ctx.fillText("Vivos: "+Object.values(gameState.jogadores).filter(j=>j.tipo==='sobrevivente'&&(j.estado==='vivo'||j.estado==='agarrado')).length, 20, 110); ctx.fillText(textoObjetivo(), 20, 130);
             }
+        }
+
+        function textoObjetivo() {
+            if(gameState.fase >= 2) return 'SAÍDA ABERTA!';
+            if(gameState.extraChaves && gameState.luzes) return 'Chaves: '+gameState.chavesColetadas+'/'+gameState.chavesNecessarias;
+            return 'Gens: '+gameState.geradoresRestantes;
+        }
+        function gerarChaves() {
+            for(let i=0; i<gameState.chavesNecessarias; i++) gameState.chavesItem.push({ x: 200 + Math.random()*(gameState.mapaFisico.largura-400), andar: i % 3, pego: false });
+        }
+        function desenharEscadas(m, camX, camY) {
+            ctx.save(); ctx.translate(camX, camY); ctx.textAlign = 'center'; ctx.font = 'bold 13px monospace';
+            const ch = gameState.mapaFisico.andares;
+            gameState.mapaFisico.escadas.forEach(e => {
+                let sobe = e.deAndar === m.andar, desce = e.paraAndar === m.andar; if(!sobe && !desce) return;
+                let y = ch[m.andar], cor = sobe ? '#6cf' : '#fc6', perto = Math.abs(m.x-e.x) < 60;
+                ctx.globalAlpha = perto ? 1 : 0.75; ctx.strokeStyle = cor; ctx.lineWidth = 2; ctx.strokeRect(e.x-30, y-120, 60, 120);
+                ctx.fillStyle = cor; ctx.fillText(sobe ? '▲ SOBE ['+teclasMap.cima.toUpperCase()+']' : '▼ DESCE ['+teclasMap.baixo.toUpperCase()+']', e.x, y-128);
+            });
+            ctx.restore();
+        }
+        function desenharDicas(m) {
+            ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(10, canvas.height-34, 470, 24); ctx.fillStyle = '#ccc'; ctx.textAlign = 'left';
+            ctx.fillText('Andar '+(m.andar+1)+'/3 | ['+teclasMap.cima.toUpperCase()+'] sobe  ['+teclasMap.baixo.toUpperCase()+'] desce  ['+teclasMap.acao.toUpperCase()+'] interagir  ['+teclasMap.luz.toUpperCase()+'] lanterna', 18, canvas.height-18);
+        }
+        function desenharFim(meuObj) {
+            if(gameState.fase !== 3) return;
+            let sobs = Object.values(gameState.jogadores).filter(j => j.tipo==='sobrevivente');
+            let esc = sobs.filter(j => j.estado==='escapou').length, txt, cor;
+            if(meuTipo==='assassino') { txt = esc===0 ? 'VITÓRIA! Ninguém escapou' : esc+' de '+sobs.length+' escaparam'; cor = esc===0 ? '#f44' : '#fc0'; }
+            else { txt = meuObj.estado==='escapou' ? 'VOCÊ ESCAPOU!' : 'VOCÊ NÃO SOBREVIVEU'; cor = meuObj.estado==='escapou' ? '#4f4' : '#f44'; }
+            ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(0, canvas.height/2-70, canvas.width, 120);
+            ctx.textAlign = 'center'; ctx.fillStyle = cor; ctx.font = 'bold 36px monospace'; ctx.fillText(txt, canvas.width/2, canvas.height/2);
+            ctx.font = '16px monospace'; ctx.fillStyle = '#ccc'; ctx.fillText('Escaparam: '+esc+' / '+sobs.length, canvas.width/2, canvas.height/2+30);
+            ctx.textAlign = 'left'; ctx.font = '14px monospace';
+            document.getElementById('btnFim').style.display = 'block';
         }
 
         function loopDeJogo() { atualizar(); desenhar(); requestAnimationFrame(loopDeJogo); }
