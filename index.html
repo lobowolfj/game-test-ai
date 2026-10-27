@@ -9,7 +9,8 @@
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; color: white; font-family: monospace; touch-action: none; }
         canvas { display: block; image-rendering: pixelated; width: 100%; height: 100%; }
         
-        .painel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; padding: 20px; border: 2px solid #333; text-align: center; border-radius: 10px; max-height: 95vh; overflow-y: auto; z-index: 10; width: 90%; max-width: 500px; box-shadow: 0 0 30px rgba(255,0,0,0.3); }
+        /* Ajuste do Painel para melhor visualização no telemóvel */
+        .painel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; padding: 15px; border: 2px solid #333; text-align: center; border-radius: 10px; max-height: 95vh; overflow-y: auto; z-index: 10; width: 95%; max-width: 380px; box-shadow: 0 0 30px rgba(255,0,0,0.3); }
         #lobby, #telaTarot, #overlayOpcoes, #telaConquistas { display: none; } 
         
         input, button, select { padding: 8px; margin: 4px; font-family: monospace; font-size: 14px; border-radius: 5px; border: 1px solid #555; background: #222; color: white; }
@@ -28,9 +29,9 @@
         .carta-tarot:hover { border-color: #ff4d4d; background: #300; }
         .carta-titulo { font-size: 14px; color: #ffcc00; font-weight: bold; margin-bottom: 5px; }
         
-        /* UI FIXA NO JOGO */
+        /* UI FIXA NO JOGO - Botão InGame com área de toque maior */
         #btnFullscreen { position: absolute; top: 10px; left: 10px; z-index: 20; background: transparent; border: none; font-size: 24px; cursor: pointer; }
-        #btnMenuInGame { position: absolute; top: 10px; right: 10px; display: none; z-index: 20; background: #333; font-size: 20px; border-radius: 5px;}
+        #btnMenuInGame { position: absolute; top: 15px; right: 15px; display: none; padding: 10px 15px; border-radius: 8px; z-index: 20; background: #333; font-size: 24px; border: 1px solid #555; }
         
         /* CONTROLES MOBILE (TOUCH) */
         #touchUI { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
@@ -44,10 +45,10 @@
 <body>
 
     <button id="btnFullscreen" onclick="toggleFullscreen()">📺</button>
-    <button id="btnMenuInGame" onclick="toggleMenuOpcoes(true)">⚙️</button>
+    <button id="btnMenuInGame" onclick="abrirMenuOpcoes(true)">⚙️</button>
 
     <!-- MENU INICIAL -->
-    <div id="menu" class="painel" style="width: 500px;">
+    <div id="menu" class="painel">
         <h2 style="color: #ff4d4d; margin-top:0;">MANSÃO DO TERROR</h2>
         
         <div style="display: flex; justify-content: space-between;">
@@ -63,7 +64,7 @@
             <div><canvas id="previewCanvas" width="80" height="100"></canvas></div>
         </div>
 
-        <button onclick="toggleMenuOpcoes()" style="background: #333; width:100%;">⚙️ Controlos / Comando</button>
+        <button onclick="abrirMenuOpcoes()" style="background: #333; width:100%;">⚙️ Controlos / Comando</button>
         <button onclick="verConquistas()" style="background: #a87b00; width:100%; margin-top:5px;">🏆 Conquistas</button>
         
         <hr style="border-color: #333; margin: 15px 0;">
@@ -78,7 +79,7 @@
     </div>
 
     <!-- LOBBY -->
-    <div id="lobby" class="painel" style="width: 400px;">
+    <div id="lobby" class="painel">
         <h2 style="color: #ff4d4d;">SALA DE ESPERA</h2>
         <div id="codigoLobby" class="codigo-sala">---</div>
         <div id="areaHostConfig" style="display: none;" class="config-box">
@@ -92,13 +93,13 @@
     </div>
 
     <!-- TELA DE TAROT -->
-    <div id="telaTarot" class="painel" style="width: 650px;">
+    <div id="telaTarot" class="painel">
         <h2 id="tituloTarot" style="color: #ffcc00;">O SEU DESTINO</h2>
         <div class="cartas-container" id="opcoesCartas"></div>
     </div>
 
     <!-- MENU OPÇÕES (CONTROLOS) -->
-    <div id="overlayOpcoes" class="painel" style="z-index: 50; width: 400px;">
+    <div id="overlayOpcoes" class="painel" style="z-index: 50;">
         <h2>Configurações</h2>
         <div class="config-box">
             <h4>Teclado (Clique para mudar)</h4>
@@ -114,12 +115,12 @@
             <button onclick="toggleMobileUI()" style="background:#555;">Ativar Controlos no Ecrã</button>
             <button onclick="toggleEditTouch()" style="background:#880;">Mover Botões Touch</button>
         </div>
-        <button onclick="toggleMenuOpcoes()" style="width:100%; margin-top:10px;">Voltar</button>
+        <button onclick="fecharMenuOpcoes()" style="width:100%; margin-top:10px;">Voltar</button>
         <button id="btnSairPartida" onclick="location.reload()" style="background: #800; width:100%; margin-top:5px; display:none;">Abandonar Partida</button>
     </div>
 
     <!-- CONQUISTAS -->
-    <div id="telaConquistas" class="painel" style="z-index: 50; width: 400px;">
+    <div id="telaConquistas" class="painel" style="z-index: 50;">
         <h2 style="color: gold;">🏆 Conquistas</h2>
         <div id="listaConqHTML" style="text-align: left; background:#000; padding:10px; max-height:200px; overflow-y:auto; border-radius:5px;"></div>
         <button onclick="fecharConquistas()" style="margin-top:15px; width:100%;">Voltar</button>
@@ -127,14 +128,19 @@
 
     <!-- TOUCH UI -->
     <div id="touchUI">
+        <!-- D-Pad -->
         <div id="t_cima" class="t-btn dpad-btn" style="top:60%; left:15%;">W</div>
         <div id="t_baixo" class="t-btn dpad-btn" style="top:80%; left:15%;">S</div>
         <div id="t_esq" class="t-btn dpad-btn" style="top:70%; left:5%;">A</div>
         <div id="t_dir" class="t-btn dpad-btn" style="top:70%; left:25%;">D</div>
+        
+        <!-- Ações -->
         <div id="t_acao" class="t-btn act-btn" style="top:70%; right:15%;">E</div>
         <div id="t_porta" class="t-btn dpad-btn" style="top:85%; right:25%;">R</div>
         <div id="t_arma" class="t-btn dpad-btn" style="top:55%; right:25%;">T</div>
         <div id="t_luz" class="t-btn dpad-btn" style="top:40%; right:15%;">F</div>
+        
+        <!-- Habilidades -->
         <div id="t_habQ" class="t-btn dpad-btn" style="top:20%; right:10%; color:yellow;">Q</div>
         <div id="t_habG" class="t-btn dpad-btn" style="top:30%; right:10%; color:red;">G</div>
         <div id="t_habH" class="t-btn dpad-btn" style="top:40%; right:5%; color:cyan;">H</div>
@@ -146,26 +152,12 @@
         // ==========================================
         // SISTEMA BASE (Variáveis)
         // ==========================================
-        const PREFIXO = "fnaf-v9-lightfix-";
+        const PREFIXO = "fnaf-v7-final-";
         
         let teclasMap = JSON.parse(localStorage.getItem('fnaf_keys')) || { cima:'w', baixo:'s', esq:'a', dir:'d', acao:'e', porta:'r', arma:'t', luz:'f', habQ:'q', habG:'g', habH:'h' };
-        let gpMap = JSON.parse(localStorage.getItem('fnaf_gp')) || { acao:0, porta:2, arma:3, luz:1, habQ:4, habG:5, habH:6 }; 
+        let gpMap = JSON.parse(localStorage.getItem('fnaf_gp')) || { acao:0, porta:2, arma:3, luz:1, habQ:4, habG:5, habH:6 }; // PS4: 0=X, 1=O, 2=Square, 3=Triangle, 4=L1, 5=R1, 6=L2
         let touchPositions = JSON.parse(localStorage.getItem('fnaf_touch')) || {};
         
-        // Icones PS4 Completos
-        const ps4Icons = {
-            0: '✖', 1: '◯', 2: '🔲', 3: '🔺', 4: 'L1', 5: 'R1', 6: 'L2', 7: 'R2', 
-            8: 'Share', 9: 'Options', 10: 'L3', 11: 'R3', 12: '↑', 13: '↓', 14: '←', 15: '→', 16: 'PS'
-        };
-
-        function getAcaoTexto(acaoId) {
-            let tecla = "";
-            for(let k in teclasMap) { if(k === acaoId) tecla = teclasMap[k].toUpperCase(); }
-            let gp = "";
-            if(gpMap[acaoId] !== undefined) gp = ps4Icons[gpMap[acaoId]] || `B${gpMap[acaoId]}`;
-            return `[${tecla}/${gp}]`;
-        }
-
         const arcanosMaiores = {
             S: [ {id:0, nome:'Louco', desc:'[Q] Teleporte'}, {id:1, nome:'Mago', desc:'QTE=6'}, {id:2, nome:'Sacerdotisa', desc:'[Q] Invisível'}, {id:3, nome:'Imperatriz', desc:'+2 Vidas'}, {id:6, nome:'Enamorados', desc:'+Velocidade'}, {id:10, nome:'Fortuna', desc:'Sempre acha Arma'}, {id:19, nome:'Sol', desc:'Reparo Rápido'} ],
             M: [ {id:4, nome:'Imperador', desc:'Quebra portas andando'}, {id:9, nome:'Eremita', desc:'Radar [H] em 10s'}, {id:13, nome:'Morte', desc:'Hit Kill 1 Vida'}, {id:15, nome:'Diabo', desc:'+Velocidade'}, {id:16, nome:'Torre', desc:'Destruição [G] rápida'} ]
@@ -181,37 +173,53 @@
             mapaFisico: { largura: 3000, andares: [700, 500, 300], escadas: [] }
         };
 
-        // Canvas secundário para o nevoeiro de guerra (corrige ecrã preto)
-        const fogCanvas = document.createElement('canvas');
-        const fogCtx = fogCanvas.getContext('2d');
-
         // ==========================================
         // GERAÇÃO PROCEDURAL DE MAPA
         // ==========================================
         function gerarMapaAleatorio() {
-            let largura = 2500 + Math.floor(Math.random() * 2000); 
+            let largura = 2500 + Math.floor(Math.random() * 2000); // Entre 2500 e 4500
             gameState.mapaFisico.largura = largura;
             gameState.mapaFisico.escadas = [];
             gameState.portas = []; gameState.armarios = []; gameState.geradores = []; gameState.chavesItem = [];
             
-            for(let i=0; i<2; i++) {
+            // Gerar 3 a 5 Escadas por andar
+            for(let i=0; i<2; i++) { // 0->1 e 1->2
                 let qtdEscadas = 2 + Math.floor(Math.random()*3);
-                for(let j=0; j<qtdEscadas; j++) gameState.mapaFisico.escadas.push({ x: 300 + Math.random()*(largura-600), deAndar: i, paraAndar: i+1 });
+                for(let j=0; j<qtdEscadas; j++) {
+                    gameState.mapaFisico.escadas.push({ x: 300 + Math.random()*(largura-600), deAndar: i, paraAndar: i+1 });
+                }
             }
 
-            let objPorAndar = 10; let todosSpawns = [];
+            // Spawn Points Base
+            let objPorAndar = 10; 
+            let todosSpawns = [];
             for(let andar=0; andar<3; andar++) {
-                for(let j=0; j<objPorAndar; j++) todosSpawns.push({ x: 200 + Math.random()*(largura-400), andar: andar });
+                for(let j=0; j<objPorAndar; j++) {
+                    todosSpawns.push({ x: 200 + Math.random()*(largura-400), andar: andar });
+                }
             }
             todosSpawns.sort(() => 0.5 - Math.random());
 
             let qtdGen = parseInt(document.getElementById('qtdGeradores').value) || 4;
             gameState.geradoresRestantes = qtdGen;
             
-            for(let i=0; i<qtdGen + 2; i++) { let s = todosSpawns.pop(); if(s) gameState.geradores.push({ x: s.x, andar: s.andar, progresso: 0, ligado: false, ativo: i<qtdGen }); }
-            for(let i=0; i<10; i++) { let s = todosSpawns.pop(); if(s) gameState.portas.push({ x: s.x, andar: s.andar, estado: 'aberta' }); }
-            for(let i=0; i<15; i++) { let s = todosSpawns.pop(); let r = Math.random(); if(s) gameState.armarios.push({ x: s.x, andar: s.andar, aberto: false, item: r<0.1?'arma':(r<0.4?'faca':'nenhum') }); }
+            for(let i=0; i<qtdGen + 2; i++) { // Coloca extras desligados para variação
+                let s = todosSpawns.pop();
+                if(s) gameState.geradores.push({ x: s.x, andar: s.andar, progresso: 0, ligado: false, ativo: i<qtdGen });
+            }
 
+            for(let i=0; i<10; i++) {
+                let s = todosSpawns.pop();
+                if(s) gameState.portas.push({ x: s.x, andar: s.andar, estado: 'aberta' });
+            }
+
+            for(let i=0; i<15; i++) {
+                let s = todosSpawns.pop();
+                let r = Math.random();
+                if(s) gameState.armarios.push({ x: s.x, andar: s.andar, aberto: false, item: r<0.1?'arma':(r<0.4?'faca':'nenhum') });
+            }
+
+            // A porta de saída (Fase 3) fica sempre no andar de baixo (0)
             gameState.portaSaida = { x: 50 + Math.random()*(largura-100), andar: 0, aberta: false };
         }
 
@@ -242,54 +250,57 @@
         let editandoTouch = false;
         function toggleEditTouch() {
             editandoTouch = !editandoTouch;
-            document.querySelectorAll('.t-btn').forEach(btn => { if(editandoTouch) btn.classList.add('t-edit-mode'); else btn.classList.remove('t-edit-mode'); });
+            document.querySelectorAll('.t-btn').forEach(btn => {
+                if(editandoTouch) btn.classList.add('t-edit-mode'); else btn.classList.remove('t-edit-mode');
+            });
         }
         function toggleMobileUI() {
             let t = document.getElementById('touchUI');
             t.style.display = (t.style.display === 'block') ? 'none' : 'block';
         }
 
+        // DRAG TOUCH
         document.querySelectorAll('.t-btn').forEach(btn => {
             let isDragging = false; let offset = {x:0, y:0};
             btn.addEventListener('touchstart', e => {
-                if(editandoTouch) { isDragging = true; let touch = e.touches[0]; let rect = btn.getBoundingClientRect(); offset.x = touch.clientX - rect.left; offset.y = touch.clientY - rect.top; } 
-                else { chavesState[btn.id.split('_')[1]] = true; } 
+                if(editandoTouch) {
+                    isDragging = true; let touch = e.touches[0];
+                    let rect = btn.getBoundingClientRect(); offset.x = touch.clientX - rect.left; offset.y = touch.clientY - rect.top;
+                } else { chavesState[btn.id.split('_')[1]] = true; } // Aciona jogo
             });
-            btn.addEventListener('touchmove', e => { if(isDragging && editandoTouch) { let touch = e.touches[0]; btn.style.left = (touch.clientX - offset.x) + 'px'; btn.style.top = (touch.clientY - offset.y) + 'px'; } });
+            btn.addEventListener('touchmove', e => {
+                if(isDragging && editandoTouch) {
+                    let touch = e.touches[0];
+                    btn.style.left = (touch.clientX - offset.x) + 'px'; btn.style.top = (touch.clientY - offset.y) + 'px';
+                }
+            });
             btn.addEventListener('touchend', e => {
                 if(editandoTouch) { isDragging = false; touchPositions[btn.id] = { left: btn.style.left, top: btn.style.top }; localStorage.setItem('fnaf_touch', JSON.stringify(touchPositions)); } 
                 else { chavesState[btn.id.split('_')[1]] = false; }
             });
+            // Restaura posições
             if(touchPositions[btn.id]) { btn.style.left = touchPositions[btn.id].left; btn.style.top = touchPositions[btn.id].top; }
         });
 
         let conquistas = JSON.parse(localStorage.getItem('fnaf_conquistas')) || { fuga:false, kill:false, bots:false };
-        function unlockConquista(id, texto) { if(!conquistas[id]) { conquistas[id]=true; localStorage.setItem('fnaf_conquistas', JSON.stringify(conquistas)); } }
+        function unlockConquista(id, texto) {
+            if(!conquistas[id]) { conquistas[id]=true; localStorage.setItem('fnaf_conquistas', JSON.stringify(conquistas)); }
+        }
         function verConquistas() {
             document.getElementById('telaConquistas').style.display='block';
-            document.getElementById('listaConqHTML').innerHTML = `<div>${conquistas.fuga?"✅":"❌"} Fuga Bem Sucedida</div><div>${conquistas.kill?"✅":"❌"} Primeiro Sangue (Matar)</div><div>${conquistas.bots?"✅":"❌"} Treinamento (Modo 007)</div>`;
+            document.getElementById('listaConqHTML').innerHTML = `
+                <div>${conquistas.fuga?"✅":"❌"} Fuga Bem Sucedida</div>
+                <div>${conquistas.kill?"✅":"❌"} Primeiro Sangue (Matar)</div>
+                <div>${conquistas.bots?"✅":"❌"} Treinamento (Modo 007)</div>`;
         }
         function fecharConquistas() { document.getElementById('telaConquistas').style.display='none'; }
-
-        // Botão Fechar/Abrir
-        function toggleMenuOpcoes(inGame = false) {
-            let m = document.getElementById('overlayOpcoes');
-            if (m.style.display === 'block') fecharMenuOpcoes();
-            else abrirMenuOpcoes(inGame);
-        }
 
         function renderizarOpcoes() {
             let tk = ""; for(let k in teclasMap) tk += `<div class="config-row">${k.toUpperCase()}: <button onclick="mapTeclado('${k}')" id="tk_${k}">${teclasMap[k].toUpperCase()}</button></div>`;
             document.getElementById('listaControlosTeclado').innerHTML = tk;
-            
-            let gp = ""; 
-            for(let k in gpMap) {
-                let icone = ps4Icons[gpMap[k]] !== undefined ? ps4Icons[gpMap[k]] : `Botão ${gpMap[k]}`;
-                gp += `<div class="config-row">${k.toUpperCase()}: <button onclick="mapGamepad('${k}')" id="gp_${k}">${icone}</button></div>`;
-            }
+            let gp = ""; for(let k in gpMap) gp += `<div class="config-row">${k.toUpperCase()}: <button onclick="mapGamepad('${k}')" id="gp_${k}">Botão ${gpMap[k]}</button></div>`;
             document.getElementById('listaControlosGamepad').innerHTML = gp;
         }
-
         function abrirMenuOpcoes(inGame=false) { document.getElementById('overlayOpcoes').style.display='block'; renderizarOpcoes(); if(inGame) document.getElementById('btnSairPartida').style.display='block'; }
         function fecharMenuOpcoes() { document.getElementById('overlayOpcoes').style.display='none'; editandoTouch=false; document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('t-edit-mode')); }
 
@@ -300,7 +311,10 @@
         }
         
         let waitGp = null;
-        function mapGamepad(k) { let btn = document.getElementById('gp_'+k); btn.innerText = '?'; btn.style.background='red'; waitGp = k; }
+        function mapGamepad(k) {
+            let btn = document.getElementById('gp_'+k); btn.innerText = '?'; btn.style.background='red';
+            waitGp = k; // O pollGamepads vai verificar
+        }
 
         window.onload = () => { atualizarPreview(); renderizarOpcoes(); }
 
@@ -309,6 +323,10 @@
         // ==========================================
         function criarJogo() {
             meuPerfil = lerMeuPerfil(); let num = Math.floor(Math.random()*900)+100; peer = new Peer(PREFIXO+num);
+            peer.on('error', (err) => {
+                alert("Falha na conexão WebRTC: " + err.type + ". Tente outro código ou verifique a sua rede.");
+                location.reload();
+            });
             peer.on('open', (id) => {
                 meuId = id; souHost = true; meuTipo = 'assassino';
                 gameState.jogadores[id] = { perfil: meuPerfil, tipo: 'assassino', classeMonstro: 'Lobisomem', carta1: null, carta2: null, x: 500, y: 300, andar: 2, direcao: -1, estado: 'vivo', lanterna: false, item: 'nenhum', vidas: 99, cdStun: 0, cdAtq: 0, cdHabG: 0, cdHabH: 0, radarH: 0, cdQ: 0 };
@@ -329,6 +347,7 @@
             const num = document.getElementById('idHost').value; if(!num) return;
             meuPerfil = lerMeuPerfil(); 
             
+            // MODO BOTS
             if(num === '007') {
                 isTestMode = true; souHost = true; meuId = 'eu'; meuTipo = 'assassino'; unlockConquista('bots', 'Treino');
                 gameState.jogadores[meuId] = { perfil: meuPerfil, tipo: 'assassino', classeMonstro: 'Lobisomem', x: 500, y: 300, andar: 2, direcao: -1, estado: 'vivo', lanterna: false, item: 'nenhum', vidas: 99, cdStun: 0, cdAtq: 0, cdHabG: 0, cdHabH: 0, radarH: 0, cdQ: 0 };
@@ -339,6 +358,10 @@
             }
 
             peer = new Peer(); 
+            peer.on('error', (err) => {
+                alert("Falha na conexão WebRTC: " + err.type + ". Tente outro código ou verifique a sua rede.");
+                location.reload();
+            });
             peer.on('open', (id) => {
                 meuId = id; const c = peer.connect(PREFIXO+num); meuTipo = 'sobrevivente';
                 c.on('open', () => { conexoes.push(c); c.send({tipo:'perfil', perfil:meuPerfil}); document.getElementById('menu').style.display='none'; document.getElementById('lobby').style.display='block'; document.getElementById('codigoLobby').innerText=num; document.getElementById('msgAguardando').style.display='block'; });
@@ -372,7 +395,7 @@
 
         function mostrarTelaTarot(ops) {
             document.getElementById('lobby').style.display='none'; document.getElementById('telaTarot').style.display='block';
-            let html=""; ops.forEach(c=>{html+=`<div class="carta-tarot" onclick="selecionarTarot(${c.id})"><div class="carta-titulo">${c.nome}</div><div class="carta-desc" style="font-size:11px;">${c.desc}</div></div>`;});
+            let html=""; ops.forEach(c=>{html+=`<div class="carta-tarot" onclick="selecionarTarot(${c.id})"><div class="carta-titulo">${c.nome}</div><div class="carta-desc">${c.desc}</div></div>`;});
             document.getElementById('opcoesCartas').innerHTML=html;
         }
 
@@ -402,23 +425,21 @@
             let g = navigator.getGamepads()[0];
             if(!g) return;
 
+            // Mapping no menu
             if(waitGp !== null) {
                 for(let i=0; i<g.buttons.length; i++) {
-                    if(g.buttons[i].pressed) { 
-                        gpMap[waitGp] = i; localStorage.setItem('fnaf_gp', JSON.stringify(gpMap)); 
-                        let btn = document.getElementById('gp_'+waitGp); 
-                        btn.innerText = ps4Icons[i] !== undefined ? ps4Icons[i] : `Botão ${i}`; 
-                        btn.style.background=''; waitGp=null; break; 
-                    }
+                    if(g.buttons[i].pressed) { gpMap[waitGp] = i; localStorage.setItem('fnaf_gp', JSON.stringify(gpMap)); let btn = document.getElementById('gp_'+waitGp); btn.innerText = `Botão ${i}`; btn.style.background=''; waitGp=null; break; }
                 }
                 return;
             }
 
+            // D-Pad / Analógico (Simplificado p/ Esquerda/Direita/Cima/Baixo)
             chavesState.esq = g.axes[0] < -0.5 || g.buttons[14]?.pressed;
             chavesState.dir = g.axes[0] > 0.5 || g.buttons[15]?.pressed;
             chavesState.cima = g.axes[1] < -0.5 || g.buttons[12]?.pressed;
             chavesState.baixo = g.axes[1] > 0.5 || g.buttons[13]?.pressed;
 
+            // Ações (garante que só dispara 1 vez como o teclado)
             for(let k in gpMap) {
                 if(g.buttons[gpMap[k]]?.pressed) { 
                     if(!g.buttons[gpMap[k]]._wasPressed) { minhaAcao = k; g.buttons[gpMap[k]]._wasPressed = true; }
@@ -464,6 +485,7 @@
                     if(host.tipo==='assassino' && host.andar===p.andar && Math.abs(host.x-p.x)<(p.item==='arma'?300:60)) { host.cdStun = p.item==='arma'?600:240; p.item='nenhum'; }
                 }
             }
+            // Habilidades do Monstro
             if(p.tipo==='assassino' && p.cdStun<=0) {
                 if(acao==='habG' && p.cdHabG<=0) { gameState.portas.forEach(pt=>{ if(pt.estado==='trancada' && p.andar===pt.andar && Math.abs(p.x-pt.x)<80) pt.estado='quebrada'; }); p.cdHabG = temCarta(p,16)?600:1200; }
                 if(acao==='habH' && p.cdHabH<=0) { p.radarH = 180; p.cdHabH = temCarta(p,9)?600:1800; }
@@ -480,9 +502,12 @@
             for(let id in gameState.jogadores) {
                 let b = gameState.jogadores[id];
                 if(b.isBot && b.estado==='vivo') {
+                    // IA BÁSICA: Andar de um lado pro outro, reparar gerador que ver, subir escada aleatória
                     b.x += b.botDir * 4;
                     if(b.x < 100) b.botDir = 1; if(b.x > gameState.mapaFisico.largura-100) b.botDir = -1;
                     b.direcao = b.botDir;
+                    
+                    // Reparar e Subir escada (Sorte 2%)
                     if(Math.random() < 0.02) {
                         processarAcoes(id, 'acao', b);
                         gameState.mapaFisico.escadas.forEach(e => {
@@ -491,7 +516,7 @@
                     }
                 }
                 else if (b.isBot && b.estado === 'agarrado') {
-                    if(Math.random() < 0.2) processarAcoes(id, 'acao', b); 
+                    if(Math.random() < 0.2) processarAcoes(id, 'acao', b); // Clica E as vezes
                 }
             }
         }
@@ -517,16 +542,11 @@
             minhaAcao = null; 
         }
 
-        function iniciarCanvas() { 
-            let m = gameState.jogadores[meuId]; inputPlayer.x=m.x; inputPlayer.y=m.y; inputPlayer.andar=m.andar; 
-            window.addEventListener('resize', ()=>{canvas.width=window.innerWidth; canvas.height=window.innerHeight;}); 
-            canvas.width=window.innerWidth; canvas.height=window.innerHeight; 
-            loopDeJogo(); 
-        }
+        function iniciarCanvas() { let m = gameState.jogadores[meuId]; inputPlayer.x=m.x; inputPlayer.y=m.y; inputPlayer.andar=m.andar; window.addEventListener('resize', ()=>{canvas.width=window.innerWidth; canvas.height=window.innerHeight;}); canvas.width=window.innerWidth; canvas.height=window.innerHeight; loopDeJogo(); }
 
         function atualizar() {
             if (!emJogo || document.getElementById('overlayOpcoes').style.display==='block') return;
-            pollGamepads(); 
+            pollGamepads(); // Le comando PS4
             
             let p = gameState.jogadores[meuId]; if (!p || p.estado.includes('escolhendo')) return;
 
@@ -561,9 +581,11 @@
         }
 
         // ==========================================
-        // GRÁFICOS (Renderização)
+        // GRÁFICOS (Render)
         // ==========================================
+        const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        
         function desenharMinimapa() {
             let hostP = gameState.jogadores[meuId];
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(canvas.width-220, 10, 200, 100); ctx.strokeStyle = '#444'; ctx.strokeRect(canvas.width-220, 10, 200, 100);
@@ -620,71 +642,36 @@
                     else if (p.classeMonstro==='Lobisomem') { ctx.fillStyle=(p.cdStun>0)?'#505':'#4a2f18'; ctx.fillRect(-20,-75,40,50); ctx.fillStyle='yellow'; ctx.fillRect(0,-85,5,5); }
                     else { ctx.fillStyle=(p.cdStun>0)?'purple':'rgba(200,255,255,0.7)'; ctx.beginPath(); ctx.moveTo(-15,-20); ctx.lineTo(0,-90); ctx.lineTo(15,-20); ctx.fill(); }
                 } else {
-                    ctx.fillStyle = p.perfil.corRoupa; ctx.fillRect(-10,-50,20,30); 
-                    ctx.fillStyle = p.perfil.corPele; ctx.beginPath(); ctx.arc(0, -60, 12, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = '#111'; ctx.fillRect(-8,-20,7,20); ctx.fillRect(1,-20,7,20); 
+                    ctx.fillStyle = p.perfil.corRoupa; ctx.fillRect(-10,-50,20,30); ctx.fillStyle = p.perfil.corPele; ctx.fillRect(-10,-70,20,20); ctx.fillStyle = '#111'; ctx.fillRect(-8,-20,7,20); ctx.fillRect(1,-20,7,20); 
                     if(p.lanterna) { ctx.fillStyle='yellow'; ctx.fillRect(5,-45,10,5); }
                 }
                 ctx.restore();
-                if (p.estado==='agarrado') { ctx.fillStyle='red'; ctx.fillRect(p.x-30, p.y-125, (p.qteC/10)*60, 10); ctx.fillText(`Aperte ${getAcaoTexto('acao')}!`, p.x-35, p.y-130); }
+                if (p.estado==='agarrado') { ctx.fillStyle='red'; ctx.fillRect(p.x-30, p.y-125, (p.qteC/10)*60, 10); ctx.fillText("Aperte E!", p.x-25, p.y-130); }
             }
             ctx.restore();
 
-            // =============== ESCURIDÃO / FOG OF WAR (CORRIGIDO) ===============
-            if (fogCanvas.width !== canvas.width || fogCanvas.height !== canvas.height) {
-                fogCanvas.width = canvas.width; fogCanvas.height = canvas.height;
-            }
-            fogCtx.globalCompositeOperation = 'source-over';
-            fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
-            fogCtx.fillStyle = 'black';
-            fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
-            
-            let screenX_chao = camX; let screenY_chao = chao[meuObj.andar] - 250 + camY; let largura_chao = gameState.mapaFisico.largura;
-            
-            // Recorta a área do andar atual na escuridão total
-            fogCtx.globalCompositeOperation = 'destination-out';
-            fogCtx.fillRect(screenX_chao, screenY_chao, largura_chao, 300);
-            
-            // Pinta o andar atual com escuridão base (dependendo da fase)
-            fogCtx.globalCompositeOperation = 'source-over';
-            fogCtx.fillStyle = gameState.fase >= 2 ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.85)";
-            fogCtx.fillRect(screenX_chao, screenY_chao, largura_chao, 300);
-            
-            // Perfura buracos de luz
-            fogCtx.globalCompositeOperation = 'destination-out';
+            // Escuridão Fog
+            ctx.save(); ctx.translate(camX, camY);
+            ctx.globalCompositeOperation = "source-over"; ctx.fillStyle = "rgba(0,0,0,0.9)"; ctx.fillRect(0, chao[meuObj.andar]-250, gameState.mapaFisico.largura, 300);
+            ctx.globalCompositeOperation = "destination-out";
             for(let id in gameState.jogadores) {
                 let p = gameState.jogadores[id];
-                if(p.andar === meuObj.andar && p.estado !== 'morto') {
-                    let sX = p.x + camX; let sY = p.y - 50 + camY;
-                    let raioLimpo = gameState.fase >= 2 ? 400 : 200; 
-                    let raioFade = gameState.fase >= 2 ? 1000 : 600;
-                    
-                    let grad = fogCtx.createRadialGradient(sX, sY, raioLimpo, sX, sY, raioFade); 
-                    grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
-                    fogCtx.fillStyle = grad; 
-                    fogCtx.beginPath(); fogCtx.arc(sX, sY, raioFade, 0, Math.PI*2); fogCtx.fill();
-                    
-                    if(p.lanterna) { 
-                        fogCtx.beginPath(); fogCtx.moveTo(sX, sY); 
-                        fogCtx.arc(sX, sY, 600, (p.direcao===1?-0.3:Math.PI-0.3), (p.direcao===1?0.3:Math.PI+0.3)); fogCtx.fill(); 
-                    }
+                if(p.andar===meuObj.andar && p.estado!=='morto') {
+                    let grad = ctx.createRadialGradient(p.x, p.y-50, 10, p.x, p.y-50, 200); grad.addColorStop(0,'rgba(255,255,255,1)'); grad.addColorStop(1,'rgba(255,255,255,0)');
+                    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(p.x, p.y-50, 200, 0, Math.PI*2); ctx.fill();
+                    if(p.lanterna) { ctx.beginPath(); ctx.moveTo(p.x, p.y-50); ctx.arc(p.x, p.y-50, 400, (p.direcao===1?-0.3:Math.PI-0.3), (p.direcao===1?0.3:Math.PI+0.3)); ctx.fill(); }
                 }
             }
-            
-            // Desenha a máscara de nevoeiro no canvas principal
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.drawImage(fogCanvas, 0, 0);
-            // ==================================================================
+            ctx.restore();
 
             // HUD
             desenharMinimapa();
-            ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(10, 50, 240, 100); ctx.fillStyle = 'white'; ctx.textAlign = 'left'; ctx.font = '14px monospace';
+            ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(10, 50, 200, 100); ctx.fillStyle = 'white'; ctx.textAlign = 'left'; ctx.font = '14px monospace';
             if (meuTipo==='sobrevivente') {
-                ctx.fillText("Vidas: "+"❤️".repeat(meuObj.vidas), 20, 70); ctx.fillText("Gens: "+gameState.geradoresRestantes, 20, 90); ctx.fillText(`Item ${getAcaoTexto('arma')}: `+meuObj.item, 20, 110);
+                ctx.fillText("Vidas: "+"❤️".repeat(meuObj.vidas), 20, 70); ctx.fillText("Gens: "+gameState.geradoresRestantes, 20, 90); ctx.fillText(`Item: `+meuObj.item, 20, 110);
                 if(meuObj.estado==='morto') { ctx.fillStyle='red'; ctx.font='40px Arial'; ctx.fillText("MORREU", canvas.width/2, canvas.height/2); }
             } else {
-                ctx.fillStyle='red'; ctx.fillText(meuObj.classeMonstro, 20, 70); ctx.fillStyle='white'; ctx.fillText(`Destruir ${getAcaoTexto('habG')}: `+(meuObj.cdHabG<=0?"PRONTO":Math.ceil(meuObj.cdHabG/60)), 20, 90);
-                ctx.fillStyle='yellow'; ctx.fillText(`Radar ${getAcaoTexto('habH')}: `+(meuObj.cdHabH<=0?"PRONTO":Math.ceil(meuObj.cdHabH/60)), 20, 110);
+                ctx.fillStyle='red'; ctx.fillText(meuObj.classeMonstro, 20, 70); ctx.fillStyle='white'; ctx.fillText(`Destruir: `+(meuObj.cdHabG<=0?"PRONTO":Math.ceil(meuObj.cdHabG/60)), 20, 90);
             }
         }
 
