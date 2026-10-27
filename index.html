@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fuga da Mansão (Edição Definitiva)</title>
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; color: white; font-family: monospace; touch-action: none; }
+        canvas { display: block; image-rendering: pixelated; width: 100%; height: 100%; }
+        
+        .painel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; padding: 20px; border: 2px solid #333; text-align: center; border-radius: 10px; max-height: 95vh; overflow-y: auto; z-index: 10; width: 90%; max-width: 500px; box-shadow: 0 0 30px rgba(255,0,0,0.3); }
+        #lobby, #telaTarot, #overlayOpcoes, #telaConquistas { display: none; } 
+        
+        input, button, select { padding: 8px; margin: 4px; font-family: monospace; font-size: 14px; border-radius: 5px; border: 1px solid #555; background: #222; color: white; }
+        button { background: #500; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #800; }
+        
+        .codigo-sala { color: #ff4d4d; font-size: 2em; font-weight: bold; background: #000; padding: 5px; border-radius: 5px; letter-spacing: 5px;}
+        .config-box { background: #0a0a0a; padding: 10px; border-radius: 8px; margin: 10px 0; border: 1px solid #222; text-align: left; }
+        .config-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        
+        #previewCanvas { background: #1a1614; border: 1px solid #444; border-radius: 5px; margin-left: 10px; width: 80px; height: 100px; }
+        #listaJogadores { background: #000; padding: 10px; border-radius: 5px; min-height: 40px; font-size: 14px; text-align: left;}
+        
+        .cartas-container { display: flex; flex-wrap: wrap; justify-content: space-around; margin-top: 15px; }
+        .carta-tarot { background: #1a1a1a; border: 2px solid #555; border-radius: 8px; width: 28%; min-width: 100px; padding: 10px; cursor: pointer; margin-bottom: 10px;}
+        .carta-tarot:hover { border-color: #ff4d4d; background: #300; }
+        .carta-titulo { font-size: 14px; color: #ffcc00; font-weight: bold; margin-bottom: 5px; }
+        
+        /* UI FIXA NO JOGO */
+        #btnFullscreen { position: absolute; top: 10px; left: 10px; z-index: 20; background: transparent; border: none; font-size: 24px; cursor: pointer; }
+        #btnMenuInGame { position: absolute; top: 10px; right: 10px; display: none; z-index: 20; background: #333; font-size: 20px; }
+        
+        /* CONTROLES MOBILE (TOUCH) */
+        #touchUI { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
+        .t-btn { position: absolute; background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 50%; color: white; font-weight: bold; display: flex; justify-content: center; align-items: center; pointer-events: auto; user-select: none; font-size: 18px;}
+        .t-btn:active { background: rgba(255, 0, 0, 0.5); }
+        .dpad-btn { width: 50px; height: 50px; }
+        .act-btn { width: 60px; height: 60px; }
+        .t-edit-mode { border-color: yellow !important; background: rgba(255,255,0,0.3) !important; box-shadow: 0 0 10px yellow; }
+    </style>
+</head>
+<body>
+
+    <button id="btnFullscreen" onclick="toggleFullscreen()">📺</button>
+    <button id="btnMenuInGame" onclick="abrirMenuOpcoes(true)">⚙️</button>
+
+    <!-- MENU INICIAL -->
+    <div id="menu" class="painel">
+        <h2 style="color: #ff4d4d; margin-top:0;">MANSÃO DO TERROR</h2>
+        
+        <div style="display: flex; justify-content: space-between;">
+            <div class="config-box" style="flex-grow: 1;">
+                <div class="config-row">Nome: <input type="text" id="meuNome" value="Vítima" maxlength="10" oninput="atualizarPreview()"></div>
+                <div class="config-row">Pele/Roupa: <input type="color" id="minhaPele" value="#ffcc99" style="width:30px;" onchange="atualizarPreview()"><input type="color" id="minhaRoupa" value="#2b60de" style="width:30px;" onchange="atualizarPreview()"></div>
+                <div class="config-row">Chapéu: 
+                    <select id="meuAcessorio" onchange="atualizarPreview()">
+                        <option value="nenhum">Nenhum</option> <option value="bone">Boné</option> <option value="cartola">Cartola</option> <option value="mascara">Máscara</option>
+                    </select>
+                </div>
+            </div>
+            <div><canvas id="previewCanvas" width="80" height="100"></canvas></div>
+        </div>
+
+        <button onclick="abrirMenuOpcoes()" style="background: #333; width:100%;">⚙️ Controlos / Comando</button>
+        <button onclick="verConquistas()" style="background: #a87b00; width:100%; margin-top:5px;">🏆 Conquistas</button>
+        
+        <hr style="border-color: #333; margin: 15px 0;">
+        <p style="font-size: 10px; color: gray;">Dica: Digite "007" no código para jogar Offline com Bots.</p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button onclick="criarJogo()" style="flex:1; padding:15px; min-width: 120px;">HOSPEDAR</button>
+            <div style="flex:1; display:flex; flex-direction:column; min-width: 120px;">
+                <input type="text" id="idHost" placeholder="Código (ex: 123)">
+                <button onclick="entrarJogo()" style="padding:15px; background:#2b60de;">ENTRAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOBBY -->
+    <div id="lobby" class="painel">
+        <h2 style="color: #ff4d4d;">SALA DE ESPERA</h2>
+        <div id="codigoLobby" class="codigo-sala">---</div>
+        <div id="areaHostConfig" style="display: none;" class="config-box">
+            <div class="config-row">Modo: <select id="modoJogo" onchange="atualizarLobbyHost()"><option value="classico">Clássico</option><option value="infeccao">Infeção</option></select></div>
+            <div class="config-row">Geradores: <input type="number" id="qtdGeradores" value="4" min="1" max="8" style="width: 50px;" onchange="atualizarLobbyHost()"></div>
+        </div>
+        <h4>Jogadores:</h4>
+        <div id="listaJogadores">...</div>
+        <button id="btnComecar" style="display: none; width: 100%; padding: 15px; margin-top:10px;" onclick="hostComecarPartida()">COMEÇAR O PESADELO</button>
+        <p id="msgAguardando" style="display: none; color: yellow;">A aguardar Host...</p>
+    </div>
+
+    <!-- TELA DE TAROT -->
+    <div id="telaTarot" class="painel">
+        <h2 id="tituloTarot" style="color: #ffcc00;">O SEU DESTINO</h2>
+        <div class="cartas-container" id="opcoesCartas"></div>
+    </div>
+
+    <!-- MENU OPÇÕES (CONTROLOS) -->
+    <div id="overlayOpcoes" class="painel" style="z-index: 50;">
+        <h2>Configurações</h2>
+        <div class="config-box">
+            <h4>Teclado (Clique para mudar)</h4>
+            <div id="listaControlosTeclado"></div>
+        </div>
+        <div class="config-box">
+            <h4>Comando (PS4/Xbox)</h4>
+            <p style="font-size:10px; color:gray;">Pressione um botão no comando para mapear</p>
+            <div id="listaControlosGamepad"></div>
+        </div>
+        <div class="config-box">
+            <h4>Mobile (Touch)</h4>
+            <button onclick="toggleMobileUI()" style="background:#555;">Ativar Controlos no Ecrã</button>
+            <button onclick="toggleEditTouch()" style="background:#880;">Mover Botões Touch</button>
+        </div>
+        <button onclick="fecharMenuOpcoes()" style="width:100%; margin-top:10px;">Voltar</button>
+        <button id="btnSairPartida" onclick="location.reload()" style="background: #800; width:100%; margin-top:5px; display:none;">Abandonar Partida</button>
+    </div>
+
+    <!-- CONQUISTAS -->
+    <div id="telaConquistas" class="painel" style="z-index: 50;">
+        <h2 style="color: gold;">🏆 Conquistas</h2>
+        <div id="listaConqHTML" style="text-align: left; background:#000; padding:10px; max-height:200px; overflow-y:auto; border-radius:5px;"></div>
+        <button onclick="fecharConquistas()" style="margin-top:15px; width:100%;">Voltar</button>
+    </div>
+
+    <!-- TOUCH UI -->
+    <div id="touchUI">
+        <!-- D-Pad -->
+        <div id="t_cima" class="t-btn dpad-btn" style="top:60%; left:15%;">W</div>
+        <div id="t_baixo" class="t-btn dpad-btn" style="top:80%; left:15%;">S</div>
+        <div id="t_esq" class="t-btn dpad-btn" style="top:70%; left:5%;">A</div>
+        <div id="t_dir" class="t-btn dpad-btn" style="top:70%; left:25%;">D</div>
+        
+        <!-- Ações -->
+        <div id="t_acao" class="t-btn act-btn" style="top:70%; right:15%;">E</div>
+        <div id="t_porta" class="t-btn dpad-btn" style="top:85%; right:25%;">R</div>
+        <div id="t_arma" class="t-btn dpad-btn" style="top:55%; right:25%;">T</div>
+        <div id="t_luz" class="t-btn dpad-btn" style="top:40%; right:15%;">F</div>
+        
+        <!-- Habilidades -->
+        <div id="t_habQ" class="t-btn dpad-btn" style="top:20%; right:10%; color:yellow;">Q</div>
+        <div id="t_habG" class="t-btn dpad-btn" style="top:30%; right:10%; color:red;">G</div>
+        <div id="t_habH" class="t-btn dpad-btn" style="top:40%; right:5%; color:cyan;">H</div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        // ==========================================
+        // SISTEMA BASE (Variáveis)
+        // ==========================================
+        const PREFIXO = "fnaf-v7-final-";
+        
+        let teclasMap = JSON.parse(localStorage.getItem('fnaf_keys')) || { cima:'w', baixo:'s', esq:'a', dir:'d', acao:'e', porta:'r', arma:'t', luz:'f', habQ:'q', habG:'g', habH:'h' };
+        let gpMap = JSON.parse(localStorage.getItem('fnaf_gp')) || { acao:0, porta:2, arma:3, luz:1, habQ:4, habG:5, habH:6 }; // PS4: 0=X, 1=O, 2=Square, 3=Triangle, 4=L1, 5=R1, 6=L2
+        let touchPositions = JSON.parse(localStorage.getItem('fnaf_touch')) || {};
+        
+        const arcanosMaiores = {
+            S: [ {id:0, nome:'Louco', desc:'[Q] Teleporte'}, {id:1, nome:'Mago', desc:'QTE=6'}, {id:2, nome:'Sacerdotisa', desc:'[Q] Invisível'}, {id:3, nome:'Imperatriz', desc:'+2 Vidas'}, {id:6, nome:'Enamorados', desc:'+Velocidade'}, {id:10, nome:'Fortuna', desc:'Sempre acha Arma'}, {id:19, nome:'Sol', desc:'Reparo Rápido'} ],
+            M: [ {id:4, nome:'Imperador', desc:'Quebra portas andando'}, {id:9, nome:'Eremita', desc:'Radar [H] em 10s'}, {id:13, nome:'Morte', desc:'Hit Kill 1 Vida'}, {id:15, nome:'Diabo', desc:'+Velocidade'}, {id:16, nome:'Torre', desc:'Destruição [G] rápida'} ]
+        };
+
+        let peer = null; let conexoes = []; let souHost = false; let isTestMode = false;
+        let meuId = null; let meuTipo = ''; let emJogo = false;
+        
+        let gameState = {
+            fase: 0, modo: 'classico', jogadores: {}, geradores: [], geradoresRestantes: 0,
+            portas: [], armarios: [], chavesItem: [], chavesColetadas: 0, chavesNecessarias: 5,
+            portaSaida: { x: 0, andar: 0, aberta: false }, luaAtiva: 0, mundoAtivo: 0,
+            mapaFisico: { largura: 3000, andares: [700, 500, 300], escadas: [] }
+        };
+
+        // ==========================================
+        // GERAÇÃO PROCEDURAL DE MAPA
+        // ==========================================
+        function gerarMapaAleatorio() {
+            let largura = 2500 + Math.floor(Math.random() * 2000); // Entre 2500 e 4500
+            gameState.mapaFisico.largura = largura;
+            gameState.mapaFisico.escadas = [];
+            gameState.portas = []; gameState.armarios = []; gameState.geradores = []; gameState.chavesItem = [];
+            
+            // Gerar 3 a 5 Escadas por andar
+            for(let i=0; i<2; i++) { // 0->1 e 1->2
+                let qtdEscadas = 2 + Math.floor(Math.random()*3);
+                for(let j=0; j<qtdEscadas; j++) {
+                    gameState.mapaFisico.escadas.push({ x: 300 + Math.random()*(largura-600), deAndar: i, paraAndar: i+1 });
+                }
+            }
+
+            // Spawn Points Base
+            let objPorAndar = 10; 
+            let todosSpawns = [];
+            for(let andar=0; andar<3; andar++) {
+                for(let j=0; j<objPorAndar; j++) {
+                    todosSpawns.push({ x: 200 + Math.random()*(largura-400), andar: andar });
+                }
+            }
+            todosSpawns.sort(() => 0.5 - Math.random());
+
+            let qtdGen = parseInt(document.getElementById('qtdGeradores').value) || 4;
+            gameState.geradoresRestantes = qtdGen;
+            
+            for(let i=0; i<qtdGen + 2; i++) { // Coloca extras desligados para variação
+                let s = todosSpawns.pop();
+                if(s) gameState.geradores.push({ x: s.x, andar: s.andar, progresso: 0, ligado: false, ativo: i<qtdGen });
+            }
+
+            for(let i=0; i<10; i++) {
+                let s = todosSpawns.pop();
+                if(s) gameState.portas.push({ x: s.x, andar: s.andar, estado: 'aberta' });
+            }
+
+            for(let i=0; i<15; i++) {
+                let s = todosSpawns.pop();
+                let r = Math.random();
+                if(s) gameState.armarios.push({ x: s.x, andar: s.andar, aberto: false, item: r<0.1?'arma':(r<0.4?'faca':'nenhum') });
+            }
+
+            // A porta de saída (Fase 3) fica sempre no andar de baixo (0)
+            gameState.portaSaida = { x: 50 + Math.random()*(largura-100), andar: 0, aberta: false };
+        }
+
+        // ==========================================
+        // UI, FULLSCREEN, CONFIG E PREVIEW
+        // ==========================================
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(err=>{}); } 
+            else { if (document.exitFullscreen) document.exitFullscreen(); }
+        }
+
+        function lerMeuPerfil() { return { nome: document.getElementById('meuNome').value || "P"+Math.floor(Math.random()*100), corPele: document.getElementById('minhaPele').value, corRoupa: document.getElementById('minhaRoupa').value, acessorio: document.getElementById('meuAcessorio').value }; }
+        
+        function atualizarPreview() {
+            let ctx = document.getElementById('previewCanvas').getContext('2d');
+            ctx.clearRect(0,0,80,100); ctx.save(); ctx.translate(40, 80);
+            let pele = document.getElementById('minhaPele').value; let roupa = document.getElementById('minhaRoupa').value; let ac = document.getElementById('meuAcessorio').value;
+            ctx.fillStyle = roupa; ctx.fillRect(-10, -50, 20, 30); 
+            ctx.fillStyle = pele; ctx.beginPath(); ctx.arc(0, -60, 12, 0, Math.PI * 2); ctx.fill(); 
+            ctx.fillStyle = '#111'; ctx.fillRect(-8, -20, 7, 20); ctx.fillRect(1, -20, 7, 20); 
+            
+            if(ac === 'bone') { ctx.fillStyle='red'; ctx.fillRect(-12,-72,24,12); ctx.fillRect(0,-65,18,5); }
+            else if(ac === 'cartola') { ctx.fillStyle='black'; ctx.fillRect(-15,-70,30,5); ctx.fillRect(-10,-95,20,25); }
+            else if(ac === 'mascara') { ctx.fillStyle='#ddd'; ctx.beginPath(); ctx.arc(0,-60,13,0,Math.PI*2); ctx.fill(); ctx.fillStyle='black'; ctx.fillRect(-5,-63,3,3); ctx.fillRect(2,-63,3,3); }
+            ctx.restore();
+        }
+
+        let editandoTouch = false;
+        function toggleEditTouch() {
+            editandoTouch = !editandoTouch;
+            document.querySelectorAll('.t-btn').forEach(btn => {
+                if(editandoTouch) btn.classList.add('t-edit-mode'); else btn.classList.remove('t-edit-mode');
+            });
+        }
+        function toggleMobileUI() {
+            let t = document.getElementById('touchUI');
+            t.style.display = (t.style.display === 'block') ? 'none' : 'block';
+        }
+
+        // DRAG TOUCH
+        document.querySelectorAll('.t-btn').forEach(btn => {
+            let isDragging = false; let offset = {x:0, y:0};
+            btn.addEventListener('touchstart', e => {
+                if(editandoTouch) {
+                    isDragging = true; let touch = e.touches[0];
+                    let rect = btn.getBoundingClientRect(); offset.x = touch.clientX - rect.left; offset.y = touch.clientY - rect.top;
+                } else { chavesState[btn.id.split('_')[1]] = true; } // Aciona jogo
+            });
+            btn.addEventListener('touchmove', e => {
+                if(isDragging && editandoTouch) {
+                    let touch = e.touches[0];
+                    btn.style.left = (touch.clientX - offset.x) + 'px'; btn.style.top = (touch.clientY - offset.y) + 'px';
+                }
+            });
+            btn.addEventListener('touchend', e => {
+                if(editandoTouch) { isDragging = false; touchPositions[btn.id] = { left: btn.style.left, top: btn.style.top }; localStorage.setItem('fnaf_touch', JSON.stringify(touchPositions)); } 
+                else { chavesState[btn.id.split('_')[1]] = false; }
+            });
+            // Restaura posições
+            if(touchPositions[btn.id]) { btn.style.left = touchPositions[btn.id].left; btn.style.top = touchPositions[btn.id].top; }
+        });
+
+        let conquistas = JSON.parse(localStorage.getItem('fnaf_conquistas')) || { fuga:false, kill:false, bots:false };
+        function unlockConquista(id, texto) {
+            if(!conquistas[id]) { conquistas[id]=true; localStorage.setItem('fnaf_conquistas', JSON.stringify(conquistas)); }
+        }
+        function verConquistas() {
+            document.getElementById('telaConquistas').style.display='block';
+            document.getElementById('listaConqHTML').innerHTML = `
+                <div>${conquistas.fuga?"✅":"❌"} Fuga Bem Sucedida</div>
+                <div>${conquistas.kill?"✅":"❌"} Primeiro Sangue (Matar)</div>
+                <div>${conquistas.bots?"✅":"❌"} Treinamento (Modo 007)</div>`;
+        }
+        function fecharConquistas() { document.getElementById('telaConquistas').style.display='none'; }
+
+        function renderizarOpcoes() {
+            let tk = ""; for(let k in teclasMap) tk += `<div class="config-row">${k.toUpperCase()}: <button onclick="mapTeclado('${k}')" id="tk_${k}">${teclasMap[k].toUpperCase()}</button></div>`;
+            document.getElementById('listaControlosTeclado').innerHTML = tk;
+            let gp = ""; for(let k in gpMap) gp += `<div class="config-row">${k.toUpperCase()}: <button onclick="mapGamepad('${k}')" id="gp_${k}">Botão ${gpMap[k]}</button></div>`;
+            document.getElementById('listaControlosGamepad').innerHTML = gp;
+        }
+        function abrirMenuOpcoes(inGame=false) { document.getElementById('overlayOpcoes').style.display='block'; renderizarOpcoes(); if(inGame) document.getElementById('btnSairPartida').style.display='block'; }
+        function fecharMenuOpcoes() { document.getElementById('overlayOpcoes').style.display='none'; editandoTouch=false; document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('t-edit-mode')); }
+
+        function mapTeclado(k) {
+            let btn = document.getElementById('tk_'+k); btn.innerText = '?'; btn.style.background='red';
+            const f = (e) => { teclasMap[k] = e.key.toLowerCase(); localStorage.setItem('fnaf_keys', JSON.stringify(teclasMap)); btn.innerText=teclasMap[k].toUpperCase(); btn.style.background=''; window.removeEventListener('keydown', f); };
+            window.addEventListener('keydown', f);
+        }
+        
+        let waitGp = null;
+        function mapGamepad(k) {
+            let btn = document.getElementById('gp_'+k); btn.innerText = '?'; btn.style.background='red';
+            waitGp = k; // O pollGamepads vai verificar
+        }
+
+        window.onload = () => { atualizarPreview(); renderizarOpcoes(); }
+
+        // ==========================================
+        // REDE, BOTS E INÍCIO DE JOGO
+        // ==========================================
+        function criarJogo() {
+            meuPerfil = lerMeuPerfil(); let num = Math.floor(Math.random()*900)+100; peer = new Peer(PREFIXO+num);
+            peer.on('open', (id) => {
+                meuId = id; souHost = true; meuTipo = 'assassino';
+                gameState.jogadores[id] = { perfil: meuPerfil, tipo: 'assassino', classeMonstro: 'Lobisomem', carta1: null, carta2: null, x: 500, y: 300, andar: 2, direcao: -1, estado: 'vivo', lanterna: false, item: 'nenhum', vidas: 99, cdStun: 0, cdAtq: 0, cdHabG: 0, cdHabH: 0, radarH: 0, cdQ: 0 };
+                document.getElementById('menu').style.display='none'; document.getElementById('lobby').style.display='block'; document.getElementById('codigoLobby').innerText=num; document.getElementById('areaHostConfig').style.display='block'; document.getElementById('btnComecar').style.display='block'; atualizarLobbyHost();
+            });
+            peer.on('connection', c => {
+                conexoes.push(c);
+                c.on('data', d => {
+                    if(d.tipo==='perfil') { gameState.jogadores[c.peer] = { perfil:d.perfil, tipo:'sobrevivente', x:200, y:700, andar:0, direcao:1, estado:'vivo', lanterna:false, item:'nenhum', vidas:3, qteC:0, qteT:0, cdQ:0, invisivel:0, isBot:false }; atualizarLobbyHost(); }
+                    else if(d.tipo==='input') processarInput(c.peer, d);
+                    else if(d.tipo==='escolher_carta') { let cx = arcanosMaiores.S.find(x=>x.id===d.cartaId); if(gameState.fase===1) gameState.jogadores[c.peer].carta1=cx; gameState.jogadores[c.peer].estado='vivo'; }
+                });
+                c.on('close', () => { conexoes = conexoes.filter(x=>x.peer!==c.peer); delete gameState.jogadores[c.peer]; atualizarLobbyHost(); });
+            });
+        }
+
+        function entrarJogo() {
+            const num = document.getElementById('idHost').value; if(!num) return;
+            meuPerfil = lerMeuPerfil(); 
+            
+            // MODO BOTS
+            if(num === '007') {
+                isTestMode = true; souHost = true; meuId = 'eu'; meuTipo = 'assassino'; unlockConquista('bots', 'Treino');
+                gameState.jogadores[meuId] = { perfil: meuPerfil, tipo: 'assassino', classeMonstro: 'Lobisomem', x: 500, y: 300, andar: 2, direcao: -1, estado: 'vivo', lanterna: false, item: 'nenhum', vidas: 99, cdStun: 0, cdAtq: 0, cdHabG: 0, cdHabH: 0, radarH: 0, cdQ: 0 };
+                for(let i=1; i<=3; i++) {
+                    gameState.jogadores['bot'+i] = { perfil: {nome:"Bot "+i, corPele:"#ffcc99", corRoupa:"#2b60de", acessorio:"nenhum"}, tipo:'sobrevivente', x:300*i, y:700, andar:0, direcao:1, estado:'vivo', lanterna:true, item:'nenhum', vidas:3, qteC:0, qteT:0, cdQ:0, invisivel:0, isBot:true, botDir:1 };
+                }
+                hostComecarPartida(); return;
+            }
+
+            peer = new Peer(); 
+            peer.on('open', (id) => {
+                meuId = id; const c = peer.connect(PREFIXO+num); meuTipo = 'sobrevivente';
+                c.on('open', () => { conexoes.push(c); c.send({tipo:'perfil', perfil:meuPerfil}); document.getElementById('menu').style.display='none'; document.getElementById('lobby').style.display='block'; document.getElementById('codigoLobby').innerText=num; document.getElementById('msgAguardando').style.display='block'; });
+                c.on('data', d => {
+                    if(d.tipo==='lobby_update') { let html=""; d.lista.forEach(j=>{html+=`<div class="jogador-item"><span style="color:${j.cor}">${j.tipo==='assassino'?'🔪':'🏃'} ${j.nome}</span></div>`;}); document.getElementById('listaJogadores').innerHTML=html; }
+                    else if(d.tipo==='iniciar_jogo') { gameState = d.est; mostrarTelaTarot(d.ops); emJogo=true; document.getElementById('btnMenuInGame').style.display='block';}
+                    else if(d.tipo==='est') gameState = d.est;
+                });
+            });
+        }
+
+        function atualizarLobbyHost() {
+            gameState.modo = document.getElementById('modoJogo').value;
+            let lista = Object.values(gameState.jogadores).map(j=>({nome:j.perfil.nome, tipo:j.tipo, cor:j.tipo==='assassino'?'red':j.perfil.corRoupa}));
+            conexoes.forEach(c=>{ if(c.open) c.send({tipo:'lobby_update', lista:lista}); });
+            let html=""; lista.forEach(j=>{html+=`<div class="jogador-item"><span style="color:${j.cor}">${j.tipo==='assassino'?'🔪':'🏃'} ${j.nome}</span></div>`;}); document.getElementById('listaJogadores').innerHTML=html;
+        }
+
+        function hostComecarPartida() {
+            gameState.fase = 1; gerarMapaAleatorio();
+            
+            for(let id in gameState.jogadores) {
+                let p = gameState.jogadores[id]; p.estado = 'escolhendo_carta';
+                let ops = (p.tipo==='assassino'?[...arcanosMaiores.M]:[...arcanosMaiores.S]).sort(()=>0.5-Math.random()).slice(0,3);
+                if(id===meuId) mostrarTelaTarot(ops);
+                else if(p.isBot) { p.carta1 = ops[0]; p.estado = 'vivo'; }
+                else { let c = conexoes.find(x=>x.peer===id); if(c&&c.open) c.send({tipo:'iniciar_jogo', est:gameState, ops:ops}); }
+            }
+            emJogo = true; document.getElementById('btnMenuInGame').style.display='block'; iniciarCanvas();
+        }
+
+        function mostrarTelaTarot(ops) {
+            document.getElementById('lobby').style.display='none'; document.getElementById('telaTarot').style.display='block';
+            let html=""; ops.forEach(c=>{html+=`<div class="carta-tarot" onclick="selecionarTarot(${c.id})"><div class="carta-titulo">${c.nome}</div><div class="carta-desc">${c.desc}</div></div>`;});
+            document.getElementById('opcoesCartas').innerHTML=html;
+        }
+
+        function selecionarTarot(idC) {
+            document.getElementById('telaTarot').style.display='none';
+            let c = (meuTipo==='assassino'?arcanosMaiores.M:arcanosMaiores.S).find(x=>x.id===idC);
+            if(souHost) { gameState.jogadores[meuId].carta1 = c; gameState.jogadores[meuId].estado = 'vivo'; }
+            else if(conexoes[0].open) conexoes[0].send({tipo:'escolher_carta', cartaId:idC});
+        }
+
+        // ==========================================
+        // INPUTS E GAMEPAD POLLING
+        // ==========================================
+        const chavesState = {}; let minhaAcao = null;
+        let inputPlayer = { x:0, y:0, andar:0, direcao:1, cdEsc:0 };
+
+        window.addEventListener('keydown', e => { 
+            let mapped = Object.keys(teclasMap).find(k => teclasMap[k] === e.key.toLowerCase());
+            if(mapped) { chavesState[mapped] = true; if(['acao','porta','arma','luz','habQ','habG','habH'].includes(mapped)) minhaAcao = mapped; }
+        });
+        window.addEventListener('keyup', e => { 
+            let mapped = Object.keys(teclasMap).find(k => teclasMap[k] === e.key.toLowerCase());
+            if(mapped) chavesState[mapped] = false; 
+        });
+
+        function pollGamepads() {
+            let g = navigator.getGamepads()[0];
+            if(!g) return;
+
+            // Mapping no menu
+            if(waitGp !== null) {
+                for(let i=0; i<g.buttons.length; i++) {
+                    if(g.buttons[i].pressed) { gpMap[waitGp] = i; localStorage.setItem('fnaf_gp', JSON.stringify(gpMap)); let btn = document.getElementById('gp_'+waitGp); btn.innerText = `Botão ${i}`; btn.style.background=''; waitGp=null; break; }
+                }
+                return;
+            }
+
+            // D-Pad / Analógico (Simplificado p/ Esquerda/Direita/Cima/Baixo)
+            chavesState.esq = g.axes[0] < -0.5 || g.buttons[14]?.pressed;
+            chavesState.dir = g.axes[0] > 0.5 || g.buttons[15]?.pressed;
+            chavesState.cima = g.axes[1] < -0.5 || g.buttons[12]?.pressed;
+            chavesState.baixo = g.axes[1] > 0.5 || g.buttons[13]?.pressed;
+
+            // Ações (garante que só dispara 1 vez como o teclado)
+            for(let k in gpMap) {
+                if(g.buttons[gpMap[k]]?.pressed) { 
+                    if(!g.buttons[gpMap[k]]._wasPressed) { minhaAcao = k; g.buttons[gpMap[k]]._wasPressed = true; }
+                } else { if(g.buttons[gpMap[k]]) g.buttons[gpMap[k]]._wasPressed = false; }
+            }
+        }
+
+        // ==========================================
+        // LÓGICA DE JOGO CORE
+        // ==========================================
+        function temCarta(p, idC) { return p.carta1 && p.carta1.id === idC; }
+
+        function processarAcoes(id, acao, p) {
+            if (p.estado==='morto' || p.estado.includes('escolhendo')) return;
+            
+            if(acao==='luz') p.lanterna = !p.lanterna;
+            if (p.estado==='agarrado') { if (acao==='acao') p.qteC++; return; }
+            
+            if(acao==='acao') {
+                if (p.tipo==='sobrevivente') {
+                    if(gameState.fase===1) {
+                        gameState.geradores.forEach(g=>{ if(!g.ligado && g.ativo && p.andar===g.andar && Math.abs(p.x-g.x)<50) { g.progresso+=15; if(g.progresso>=100) { g.ligado=true; gameState.geradoresRestantes--; } } });
+                    }
+                    gameState.armarios.forEach(a=>{ if(!a.aberto && p.andar===a.andar && Math.abs(p.x-a.x)<50) { a.aberto=true; p.item=a.item; } });
+                } else {
+                    if (p.cdStun>0) return;
+                    gameState.portas.forEach(pt=>{ if (pt.estado==='trancada' && p.andar===pt.andar && Math.abs(p.x-pt.x)<50) pt.estado='quebrada'; });
+                    if (p.cdAtq===0) {
+                        for (let vId in gameState.jogadores) {
+                            let v = gameState.jogadores[vId];
+                            if (v.tipo==='sobrevivente' && v.estado==='vivo' && v.andar===p.andar && Math.abs(v.x-p.x)<60) {
+                                if (temCarta(p,13) && v.vidas===1) { v.vidas=0; v.estado='morto'; p.cdAtq=120; } 
+                                else { v.estado='agarrado'; v.qteT=300; v.qteC=0; p.cdAtq=120; } break;
+                            }
+                        }
+                    }
+                }
+            }
+            if(acao==='porta' && p.tipo==='sobrevivente') { gameState.portas.forEach(pt=>{ if(pt.estado==='aberta' && p.andar===pt.andar && Math.abs(p.x-pt.x)<50) pt.estado='trancada'; }); }
+            if(acao==='arma' && p.item!=='nenhum' && p.tipo==='sobrevivente') {
+                for (let aId in gameState.jogadores) {
+                    let host = gameState.jogadores[aId];
+                    if(host.tipo==='assassino' && host.andar===p.andar && Math.abs(host.x-p.x)<(p.item==='arma'?300:60)) { host.cdStun = p.item==='arma'?600:240; p.item='nenhum'; }
+                }
+            }
+            // Habilidades do Monstro
+            if(p.tipo==='assassino' && p.cdStun<=0) {
+                if(acao==='habG' && p.cdHabG<=0) { gameState.portas.forEach(pt=>{ if(pt.estado==='trancada' && p.andar===pt.andar && Math.abs(p.x-pt.x)<80) pt.estado='quebrada'; }); p.cdHabG = temCarta(p,16)?600:1200; }
+                if(acao==='habH' && p.cdHabH<=0) { p.radarH = 180; p.cdHabH = temCarta(p,9)?600:1800; }
+            }
+        }
+
+        function processarInput(id, input) {
+            let p = gameState.jogadores[id]; if (!p || p.estado==='morto') return;
+            if (p.estado!=='agarrado') { p.x = input.x; p.y = input.y; p.andar = input.andar; p.direcao = input.direcao; }
+            if (input.acao) processarAcoes(id, input.acao, p);
+        }
+
+        function IA_Bots() {
+            for(let id in gameState.jogadores) {
+                let b = gameState.jogadores[id];
+                if(b.isBot && b.estado==='vivo') {
+                    // IA BÁSICA: Andar de um lado pro outro, reparar gerador que ver, subir escada aleatória
+                    b.x += b.botDir * 4;
+                    if(b.x < 100) b.botDir = 1; if(b.x > gameState.mapaFisico.largura-100) b.botDir = -1;
+                    b.direcao = b.botDir;
+                    
+                    // Reparar e Subir escada (Sorte 2%)
+                    if(Math.random() < 0.02) {
+                        processarAcoes(id, 'acao', b);
+                        gameState.mapaFisico.escadas.forEach(e => {
+                            if(Math.abs(b.x-e.x)<30) { if(b.andar===e.deAndar) b.andar=e.paraAndar; else if(b.andar===e.paraAndar) b.andar=e.deAndar; }
+                        });
+                    }
+                }
+                else if (b.isBot && b.estado === 'agarrado') {
+                    if(Math.random() < 0.2) processarAcoes(id, 'acao', b); // Clica E as vezes
+                }
+            }
+        }
+
+        function hostLogicaFrame() {
+            let hostP = gameState.jogadores[meuId];
+            if(isTestMode) IA_Bots();
+
+            for (let id in gameState.jogadores) {
+                let p = gameState.jogadores[id];
+                if(p.tipo==='assassino') { if(p.cdAtq>0) p.cdAtq--; if(p.cdStun>0) p.cdStun--; if(p.cdHabG>0) p.cdHabG--; if(p.cdHabH>0) p.cdHabH--; if(p.radarH>0) p.radarH--; }
+                if (p.estado==='agarrado') {
+                    p.qteT--; let qteMax = temCarta(p,1)?6:10;
+                    if (p.qteC>=qteMax) { p.vidas--; p.estado = p.vidas>0?'vivo':'morto'; } 
+                    else if (p.qteT<=0) { 
+                        p.vidas=0; p.estado='morto'; 
+                        if(id!==meuId) unlockConquista('kill', 'First Blood'); 
+                    }
+                }
+            }
+            if(minhaAcao) processarAcoes(meuId, minhaAcao, hostP);
+            if(!isTestMode) conexoes.forEach(c=>{ if(c.open) c.send({tipo:'est', est:gameState}); });
+            minhaAcao = null; 
+        }
+
+        function iniciarCanvas() { let m = gameState.jogadores[meuId]; inputPlayer.x=m.x; inputPlayer.y=m.y; inputPlayer.andar=m.andar; window.addEventListener('resize', ()=>{canvas.width=window.innerWidth; canvas.height=window.innerHeight;}); canvas.width=window.innerWidth; canvas.height=window.innerHeight; loopDeJogo(); }
+
+        function atualizar() {
+            if (!emJogo || document.getElementById('overlayOpcoes').style.display==='block') return;
+            pollGamepads(); // Le comando PS4
+            
+            let p = gameState.jogadores[meuId]; if (!p || p.estado.includes('escolhendo')) return;
+
+            let travado = (p.estado==='agarrado' || p.estado==='morto' || (p.tipo==='assassino'&&p.cdStun>0));
+            if (!travado) {
+                let vel = p.tipo==='assassino' ? (temCarta(p,15)?6:5) : (temCarta(p,6)?5.8:5); 
+                let novoX = inputPlayer.x;
+
+                if (chavesState['esq']) { novoX -= vel; inputPlayer.direcao = -1; }
+                if (chavesState['dir']) { novoX += vel; inputPlayer.direcao = 1; }
+                
+                let podeMover = true;
+                if (!(p.tipo==='assassino' && temCarta(p,4))) { 
+                    gameState.portas.forEach(pt => { if (pt.estado==='trancada' && inputPlayer.andar===pt.andar && ((inputPlayer.x<pt.x && novoX>=pt.x-20) || (inputPlayer.x>pt.x && novoX<=pt.x+20))) podeMover=false; });
+                }
+                if (podeMover) inputPlayer.x = Math.max(20, Math.min(gameState.mapaFisico.largura-20, novoX));
+
+                if (inputPlayer.cdEsc>0) inputPlayer.cdEsc--;
+                if (chavesState['cima'] || chavesState['baixo']) {
+                    gameState.mapaFisico.escadas.forEach(e => {
+                        if (Math.abs(inputPlayer.x-e.x)<40 && inputPlayer.cdEsc===0) {
+                            if (chavesState['cima'] && inputPlayer.andar===e.deAndar) { inputPlayer.andar=e.paraAndar; inputPlayer.cdEsc=30; } 
+                            else if (chavesState['baixo'] && inputPlayer.andar===e.paraAndar) { inputPlayer.andar=e.deAndar; inputPlayer.cdEsc=30; }
+                        }
+                    });
+                }
+                inputPlayer.y = gameState.mapaFisico.andares[inputPlayer.andar];
+            }
+
+            if (souHost) { p.x = inputPlayer.x; p.y = inputPlayer.y; p.andar = inputPlayer.andar; p.direcao = inputPlayer.direcao; hostLogicaFrame(); } 
+            else { if (conexoes.length>0 && conexoes[0].open) { conexoes[0].send({tipo:'input', x:inputPlayer.x, y:inputPlayer.y, andar:inputPlayer.andar, direcao:inputPlayer.direcao, acao:minhaAcao}); } minhaAcao = null; }
+        }
+
+        // ==========================================
+        // GRÁFICOS (Render)
+        // ==========================================
+        const ctx = canvas.getContext('2d');
+        function desenharMinimapa() {
+            let hostP = gameState.jogadores[meuId];
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(canvas.width-220, 10, 200, 100); ctx.strokeStyle = '#444'; ctx.strokeRect(canvas.width-220, 10, 200, 100);
+            
+            let sX = 200/gameState.mapaFisico.largura; let sY = 100/1000;
+            ctx.save(); ctx.translate(canvas.width-220, 10);
+            gameState.geradores.forEach(g=>{ if(g.ativo) { ctx.fillStyle = g.ligado?'#0f0':'yellow'; ctx.fillRect(g.x*sX, g.y*sY-5, 4, 4); } });
+            
+            for(let id in gameState.jogadores) {
+                let p = gameState.jogadores[id];
+                if(p.estado==='morto') continue;
+                let ver = false;
+                if (meuTipo==='assassino') { if (p.tipo==='assassino' || hostP.radarH>0) ver = true; } else { if (p.tipo==='sobrevivente') ver = true; }
+                if (ver) { ctx.fillStyle = p.tipo==='assassino'?'red':'cyan'; ctx.beginPath(); ctx.arc(p.x*sX, p.y*sY-5, 3, 0, Math.PI*2); ctx.fill(); }
+            }
+            ctx.restore();
+        }
+
+        function desenhar() {
+            if(!emJogo) return;
+            ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            let meuObj = gameState.jogadores[meuId]; if(!meuObj || meuObj.estado.includes('escolhendo')) return;
+
+            ctx.save();
+            const camX = canvas.width/2 - meuObj.x; const camY = canvas.height/2 - meuObj.y + 100; 
+            ctx.translate(camX, camY);
+
+            // Cenário Dinâmico
+            let chao = gameState.mapaFisico.andares;
+            for (let i=0; i<chao.length; i++) { ctx.fillStyle='#1a1614'; ctx.fillRect(0, chao[i]-200, gameState.mapaFisico.largura, 200); ctx.fillStyle='#261b17'; ctx.fillRect(0, chao[i], gameState.mapaFisico.largura, 20); }
+            gameState.mapaFisico.escadas.forEach(e => { ctx.fillStyle='#111'; ctx.fillRect(e.x-30, chao[e.deAndar]-120, 60, 120); ctx.fillRect(e.x-30, chao[e.paraAndar]-120, 60, 120); });
+            
+            gameState.portas.forEach(p => {
+                if(p.estado!=='quebrada') { let y = chao[p.andar]; ctx.fillStyle = p.estado==='trancada'?'#411':'#421'; ctx.fillRect(p.x-10, y-100, 20, 100); ctx.fillStyle='white'; ctx.fillText(p.estado==='trancada'?"TRANCADA":"PORTA", p.x-15, y-110); }
+            });
+            gameState.armarios.forEach(a => {
+                let y = chao[a.andar]; ctx.fillStyle='#831'; ctx.fillRect(a.x-20, y-60, 40, 60);
+                if(!a.aberto) { ctx.fillStyle='white'; ctx.fillText("Buscar", a.x-15, y-70); } else { ctx.fillStyle='#000'; ctx.fillRect(a.x-15, y-55, 30, 20); } 
+            });
+            gameState.geradores.forEach(g => {
+                if(!g.ativo) return;
+                let y = chao[g.andar]; ctx.fillStyle = g.ligado?'#4dff4d':'#888'; ctx.fillRect(g.x-25, y-50, 50, 50); 
+                if(!g.ligado) { ctx.fillStyle='yellow'; ctx.fillRect(g.x-25, y-70, (g.progresso/100)*50, 8); }
+            });
+
+            // Jogadores
+            for (let id in gameState.jogadores) {
+                let p = gameState.jogadores[id];
+                if(p.estado==='morto' || p.andar!==meuObj.andar || (p.invisivel>0 && meuTipo==='assassino')) continue; 
+                ctx.save(); ctx.translate(p.x, p.y); ctx.scale(p.direcao, 1); 
+                if (p.tipo==='assassino') {
+                    ctx.fillStyle = (p.cdStun>0)?'#505':'#111';
+                    if (p.classeMonstro==='Vampiro') { ctx.fillRect(-15,-70,30,45); ctx.fillStyle='red'; ctx.fillRect(-5,-80,10,10); } 
+                    else if (p.classeMonstro==='Lobisomem') { ctx.fillStyle=(p.cdStun>0)?'#505':'#4a2f18'; ctx.fillRect(-20,-75,40,50); ctx.fillStyle='yellow'; ctx.fillRect(0,-85,5,5); }
+                    else { ctx.fillStyle=(p.cdStun>0)?'purple':'rgba(200,255,255,0.7)'; ctx.beginPath(); ctx.moveTo(-15,-20); ctx.lineTo(0,-90); ctx.lineTo(15,-20); ctx.fill(); }
+                } else {
+                    ctx.fillStyle = p.perfil.corRoupa; ctx.fillRect(-10,-50,20,30); ctx.fillStyle = p.perfil.corPele; ctx.fillRect(-10,-70,20,20); ctx.fillStyle = '#111'; ctx.fillRect(-8,-20,7,20); ctx.fillRect(1,-20,7,20); 
+                    if(p.lanterna) { ctx.fillStyle='yellow'; ctx.fillRect(5,-45,10,5); }
+                }
+                ctx.restore();
+                if (p.estado==='agarrado') { ctx.fillStyle='red'; ctx.fillRect(p.x-30, p.y-125, (p.qteC/10)*60, 10); ctx.fillText("Aperte E!", p.x-25, p.y-130); }
+            }
+            ctx.restore();
+
+            // Escuridão Fog
+            ctx.save(); ctx.translate(camX, camY);
+            ctx.globalCompositeOperation = "source-over"; ctx.fillStyle = "rgba(0,0,0,0.9)"; ctx.fillRect(0, chao[meuObj.andar]-250, gameState.mapaFisico.largura, 300);
+            ctx.globalCompositeOperation = "destination-out";
+            for(let id in gameState.jogadores) {
+                let p = gameState.jogadores[id];
+                if(p.andar===meuObj.andar && p.estado!=='morto') {
+                    let grad = ctx.createRadialGradient(p.x, p.y-50, 10, p.x, p.y-50, 200); grad.addColorStop(0,'rgba(255,255,255,1)'); grad.addColorStop(1,'rgba(255,255,255,0)');
+                    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(p.x, p.y-50, 200, 0, Math.PI*2); ctx.fill();
+                    if(p.lanterna) { ctx.beginPath(); ctx.moveTo(p.x, p.y-50); ctx.arc(p.x, p.y-50, 400, (p.direcao===1?-0.3:Math.PI-0.3), (p.direcao===1?0.3:Math.PI+0.3)); ctx.fill(); }
+                }
+            }
+            ctx.restore();
+
+            // HUD
+            desenharMinimapa();
+            ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(10, 50, 200, 100); ctx.fillStyle = 'white'; ctx.textAlign = 'left'; ctx.font = '14px monospace';
+            if (meuTipo==='sobrevivente') {
+                ctx.fillText("Vidas: "+"❤️".repeat(meuObj.vidas), 20, 70); ctx.fillText("Gens: "+gameState.geradoresRestantes, 20, 90); ctx.fillText(`Item: `+meuObj.item, 20, 110);
+                if(meuObj.estado==='morto') { ctx.fillStyle='red'; ctx.font='40px Arial'; ctx.fillText("MORREU", canvas.width/2, canvas.height/2); }
+            } else {
+                ctx.fillStyle='red'; ctx.fillText(meuObj.classeMonstro, 20, 70); ctx.fillStyle='white'; ctx.fillText(`Destruir: `+(meuObj.cdHabG<=0?"PRONTO":Math.ceil(meuObj.cdHabG/60)), 20, 90);
+            }
+        }
+
+        function loopDeJogo() { atualizar(); desenhar(); requestAnimationFrame(loopDeJogo); }
+    </script>
+</body>
+</html>
